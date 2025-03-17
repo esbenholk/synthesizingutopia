@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 // import { emitImageUpdate } from '../socket';
 import Gallery from './Gallery';
+import { motion, AnimatePresence } from "framer-motion";
+
 type ImageCardProps = {
   url: string;
   title: string;
@@ -112,7 +114,7 @@ export function Upload() {
         if (!response.ok) throw new Error(data.error || 'Generation failed');
         setImage(null);
         setGeneratedImage(data.imageUrl);     
-        setText(data.sentence);
+        // setText(data.prompt);
   
       } catch (err) {
         // setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -146,6 +148,8 @@ export function Upload() {
     
       });
   
+      console.log("cloud res", response);
+      
   
       if (!response.ok) {
         const data = await response.json();
@@ -161,11 +165,8 @@ export function Upload() {
    
       };
 
-      let tempnews = news;
-      tempnews.unshift(_imageCardProp);
-      setNews(tempnews);
-
-      console.log(tempnews);
+      poorImageIntoCouldron(_imageCardProp);
+   
       
 
 
@@ -182,7 +183,10 @@ export function Upload() {
       setShowUpload(false);
       showSucces();
       setImage(null);
+      setText("");
+      setWords([]);
       setGeneratedImage(null);
+ 
 
     }
 
@@ -203,6 +207,30 @@ export function Upload() {
       reader.readAsDataURL(file);
     }
   };
+
+  const poorImageIntoCouldron = (_image : ImageCardProps) => {
+
+    let tempnews = news;
+    tempnews.unshift(_image);
+    setNews(tempnews);
+
+    console.log(tempnews);
+    setLoading(false);
+    setUploadLoading(false);
+    setShowUpload(false);
+    showSucces();
+    setImage(null);
+    setGeneratedImage(null);
+    setShowGallery(false);
+    setLoading(false);
+    setUploadLoading(false);
+    setShowUpload(false);
+    showSucces();
+    setImage(null);
+    setText("");
+    setWords([]);
+    setGeneratedImage(null);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,8 +265,8 @@ export function Upload() {
             playsInline
       />
 
-      <div className="GalleryContainer">
-        <Gallery news={news}/>
+      <div className={showGallery ? "GalleryContainer": "GalleryContainer hidden"}>
+        <Gallery news={news} poorRemixedImageIntoCouldron={poorImageIntoCouldron}/>
 
 
         <button
@@ -262,14 +290,15 @@ export function Upload() {
             setShowGallery(false);
             setTimeout(() => {
                 setShowUpload(true);
-            }, 4000);
+            }, 2000);
           } else {
             setShowUpload(!showUpload);
           }
           console.log("check error2", error);
 
           }}>add vision</button>
-        <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => setShowGallery(!showGallery)}>explore visions</button>
+        {!showGallery && <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => setShowGallery(!showGallery)}>explore visions</button>
+      }
       </div>
 
 
@@ -278,11 +307,23 @@ export function Upload() {
       <img className={showGallery ? 'overlay openCouldron' : 'overlay'} src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"/>
       <div className='desktopborder1'></div>
       <div className='desktopborder2'></div>
-      {showUpload && <>
-        <div className="gooey-container">
+
+
+      <AnimatePresence>
+        {showUpload && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="p-4 bg-gray-200 rounded-lg shadow-md"
+          >
+                  <div className="gooey-container">
            <div className={uploading ? 'shrinkgoo gooey': " gooey"}></div>
         </div>
-      </>}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
        {showUpload && <>
         {error != "" &&
@@ -379,10 +420,7 @@ export function Upload() {
                     className="sr-only"
             />
             <button disabled={loading} className={!loading ? 'active' : 'passive'} onClick={()=> generateImage()}>{generatedImage ? 'regenerate' : 'generate'}</button>
-     
-          </div>
-
-          <button
+            <button
               type="submit"
               // disabled={loading || (!text && !image)}
               className={loading ? "passive" : generatedImage ? 'active' : image ? 'active' : 'passive'}
@@ -395,6 +433,9 @@ export function Upload() {
                 </>
               )}
           </button>
+          </div>
+
+         
 
        
     

@@ -54,8 +54,9 @@ async function uploadToCloudinary ( imageData: GenerationResult) {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const prompt = url.searchParams.get('prompt') || '';
+    let prompt = url.searchParams.get('prompt') || '';
     const adjectives = url.searchParams.get('adjectives') || '';
+    const shouldReturnRemixSentence = url.searchParams.get('remixed') || '';
 
     
 
@@ -87,12 +88,15 @@ export async function GET(request: Request) {
 
     console.log("has openai image", image);
 
+    if(shouldReturnRemixSentence ==="yes"){
+      prompt = sentence;
+    }
 
     // trends = chosenTrends;
 
     const data = {
 
-      sentence,
+      prompt,
       imageUrl: image.data[0].url || 'imageurlplaceholder',
    
     };

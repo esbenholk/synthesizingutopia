@@ -31,6 +31,7 @@ button{
 
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
 }
 
@@ -120,6 +121,8 @@ input[type="file"]{
     height: 0.1px;
     position: absolute;
 }
+
+.remixButton,
 .buttons button,
 .uploader button[ type="submit"],
 .uploaderButtons button,
@@ -137,6 +140,20 @@ input[type="file"]{
         justify-content: center;
         transition: all 1s;
 }
+.uploaderButtons button:last-of-type{
+    width: 100%;
+    margin-top: 10px;
+}
+
+.remixButton{
+    position: fixed;
+    bottom: 0;
+    right:0;
+    margin: 10px;
+    z-index: 99999;
+    border: 2px solid rgba(63, 255, 10,1);
+
+}
 .buttons button{
     border: 2px solid rgba(63, 255, 10,1);
 }
@@ -148,27 +165,32 @@ input[type="file"]{
     opacity: 0.2;
 }
 .imageResult{
-    flex:2;
-    z-index: -1;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    
+    z-index: 99;
 }
 .imageResult img{
   width: 100%;
   max-height: 30vh;
   object-fit: contain;
 
-
 }
 .closebtn{
     position: absolute;
     top:0;
     right: 0;
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
     background-color: #6508FF;
     color:rgba(63, 255, 10,1);
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
+    z-index: 9999;
     min-width: 2px !important;
 }
 
@@ -326,7 +348,8 @@ input[type="file"]{
     left:50%;
     width: 150%;
     transform: translate(-50%,-50%);  
-    transition: all 1s;
+    /* transition: all 1s; */
+    transition: all 10s ease-in-out;
 }
 .overlay{
     position: absolute;
@@ -340,10 +363,13 @@ input[type="file"]{
 }
 .openCouldron{
     height: 500%;
+
 }
 .openCouldronVideo{
     transform: translate(-50%,-50%) rotate(90deg);
    width: 200%;
+   transition: all 0.1s ease-in-out, all 0.5s ease-in;
+
 }
 
 
@@ -367,8 +393,30 @@ input[type="file"]{
     top: 0%;
     bottom: 0;
     height: 100%;
+    transition: all 2s;
+    opacity: 1;
+}
+.selectedImages{
+    max-width: 100%;
+    max-height: 50%;
+    display: flex;
+    gap: 10px;
+    align-content: stretch;
+}
+.selectedImages button{
+    flex: 1;
+    background-color: rgba(0,0,0,0);
+    padding:0;
+    margin:0;
+    /* max-width: 50px; */
+}
+.selectedImages button img{
+    max-width: 100%;
+    object-fit: contain;
+}
 
-
+.hidden{
+    opacity: 0;
 }
 .Field{
     width: 500px;
@@ -411,7 +459,35 @@ select{
     max-width: 70%;
     position: relative;
     margin-bottom: 20px;
+    border: 2px solid #00ff00;
+    border-radius: 15px;
+    background-color: #00ff00;
 
+
+}
+.Card button{
+    position: absolute;
+    top:  0;
+    right: 0;
+    margin: 10px;
+    height: 30px;
+    border-radius: 15px;
+    border: #6508FF solid 2px;
+    text-align: left;
+    color: #6508FF;
+    background-color:rgba(63, 255, 10,1);
+    transition: all 1s;
+    width: fit-content;
+}
+
+.selected{
+    border: #6508FF solid 2px;
+    text-align: left;
+    color: #6508FF;
+    background-color:rgba(63, 255, 10,1);
+}
+.selected img{
+    filter: invert(1);
 }
 .Card:first-of-type{
   margin-top: 200px;
@@ -422,6 +498,8 @@ select{
     border-radius: 15px;
     overflow: hidden;
     height: fit-content;
+    display: flex;
+    justify-content: center;
 }
 
 .Loadmore{
@@ -437,10 +515,11 @@ select{
 .Info{
     background-color: #6508FF;
     width: calc(100%-20px);
-    padding: 20px;
+    padding: 10px;
 }
 .Info p{
     color: #00ff00;
+    margin: 0;
 }
 .Info span{
     text-transform: uppercase;
@@ -483,16 +562,7 @@ select{
 }
 
 
-@media all and (min-width:0px) and (max-width: 600px) {
-    .Info h1{
-        text-transform: uppercase;
-        color: blue;
-        font-size: 30px;
-        margin: 0;
-        font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-    
-    }
-  }
+
 
   @media (min-width: 768px) { /* Applies to tablets and desktops */
     .couldron{
@@ -502,12 +572,24 @@ select{
     .overlay{
         height: 200%;
     }
+
+    .openCouldron{
+        height: 500%;
+
+    }
+    .openCouldronVideo{
+        /* width: auto; */
+        max-width: 150%;
+        /* object-fit: cover; */
+        height: 100%;
+        transform: translate(-50%,-50%) rotate(0deg);
+    }
     .desktopborder1, .desktopborder2{
         display: block;
         position: fixed;
         background-color: #e100ff;
         height: 100%;
-        width: 200px;
+        width: 10%;
         top:0;
     }
     .desktopborder1{
@@ -520,9 +602,16 @@ select{
         position: absolute;
         left: 0;
         top: 50%;
-        transform: translate(-35%, -50%) rotate(-90deg);
-        width: 50%; /* Make it as wide as the viewport height */
+        transform: translate(-35%, -75%) rotate(-90deg);
+        width: 40%; /* Make it as wide as the viewport height */
         /* width: auto; */
         /* object-fit: cover; */
+    }
+    .uploader{
+        max-width: 500px;
+    }
+    .gooey{
+        width: 700px;
+        height: 700px;
     }
   }
