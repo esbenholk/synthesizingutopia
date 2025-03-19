@@ -89,7 +89,7 @@ export function Upload() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 
     
-    if (e.key === " " ||  e.keyCode === 32 || e.keyCode === 0  ) {
+    if (e.key === " " ||  e.keyCode === 32 || e.keyCode === 0 || e.key === "Enter" ) {
   
       e.preventDefault();
       if (currentWord.trim()) {
