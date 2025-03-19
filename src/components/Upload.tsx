@@ -111,12 +111,19 @@ export function Upload() {
 
         console.log("data from gen", data);
         
+
+
         if (!response.ok) throw new Error(data.error || 'Generation failed');
         setImage(null);
-        setGeneratedImage(data.imageUrl);     
+        setGeneratedImage(data.imageUrl);   
+        
+        
+        setError("has gen img"  );
         // setText(data.prompt);
   
       } catch (err) {
+
+        setError("generation went wrong"  );
         // setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         setLoading(false);
@@ -258,7 +265,7 @@ export function Upload() {
     <div className="brew-container">
       <video 
             className={showGallery ? 'couldron openCouldronVideo' : 'couldron'}
-            src={"https://res.cloudinary.com/dmwpm8iiw/video/upload/v1741863927/loopcouldron_svu0rw.mp4"} 
+            src={"https://res.cloudinary.com/dmwpm8iiw/video/upload/v1741863927/loopcouldron_svu0rw.mp4?q_auto:eco"} 
             autoPlay 
             loop 
             muted 
