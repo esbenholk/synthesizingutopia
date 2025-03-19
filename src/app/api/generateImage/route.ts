@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       model: "gpt-3.5-turbo",
       messages: [{
         role: "user",
-        content: `Starting from this sentence: In my Utopia there is... ${prompt}, and making vibe with the following adjectives (if there is any): ${adjectives}, please create an image prompt for imaging a utopia`
+        content: `We need to make an image depicts following sentence: There is... ${prompt}, it should fit this vibe: ${adjectives}, please output an image prompt`
       }],
       max_tokens: 100,
     });
