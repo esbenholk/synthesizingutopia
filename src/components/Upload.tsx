@@ -87,7 +87,10 @@ export function Upload() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === " ") {
+
+    
+    if (e.key === " " ||  e.keyCode === 32 || e.keyCode === 0  ) {
+  
       e.preventDefault();
       if (currentWord.trim()) {
         setWords([...words, currentWord.trim()]);
@@ -118,7 +121,7 @@ export function Upload() {
         setGeneratedImage(data.imageUrl);   
         
         
-        setError("has gen img"  );
+        // setError("has gen img"  );
         // setText(data.prompt);
   
       } catch (err) {
