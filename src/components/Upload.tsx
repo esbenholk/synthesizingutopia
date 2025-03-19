@@ -123,7 +123,7 @@ export function Upload() {
   
       } catch (err) {
 
-        setError("generation went wrong"  );
+        setError("ups it didnt mix");
         // setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         setLoading(false);
@@ -291,7 +291,7 @@ export function Upload() {
       <div className='buttons'>
         <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => {
 
-          console.log("check error1", error);
+          // console.log("check error1", error);
           
           if(showGallery){
             setShowGallery(false);
