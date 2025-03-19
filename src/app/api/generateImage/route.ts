@@ -75,7 +75,7 @@ export async function GET(request: Request) {
     const sentence = completion.choices[0].message.content || '';
     sentence.replace('"', '');
 
-    // console.log("has openai sentence", sentence);
+    console.log("has openai sentence", sentence);
 
     
     // Generate image using DALL-E
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
     
     // uploadToCloudinary(data);
 
-    // console.log("returns:", data);
+    console.log("has gen image:", data);
     return NextResponse.json(data);
 
   } catch (error) {
