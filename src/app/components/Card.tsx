@@ -3,10 +3,10 @@
 type ImageCardProps = {
     url: string;
     title: string;
-
+    tags: string;
   };
   
-export const Card: React.FC<ImageCardProps> = ({ url, title }) => {
+export const Card: React.FC<ImageCardProps> = ({ url, title, tags }) => {
     return (
         <>
             <div>
@@ -14,6 +14,7 @@ export const Card: React.FC<ImageCardProps> = ({ url, title }) => {
             </div>
             <div className="Info">
                 <p>{title}</p>
+                <p>{tags}</p>
                 {/* <div>
                     {tags && tags.map((tag, index) => (
                         <span

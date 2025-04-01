@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 type ImageCardProps = {
   url: string;
   title: string;
-
+  tags: string;
 };
 
 
@@ -22,6 +22,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: I
   const [selectedImages, setSelectedImages] = useState<ImageCardProps[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploadLoading] = useState(false);
+  const [words, setWords] = useState<string[]>([]);
 
 
   const joinWithComma = (words: string[]): string => {
@@ -35,16 +36,26 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: I
     if(selectedImages.length > 1 ){
       try {
         let prompts = [];
+        let tags = [];
         for (let index = 0; index < selectedImages.length; index++) {
           const element = selectedImages[index];
           prompts.push(element.title);
+          for (let index = 0; index < element.tags.length; index++) {
+            const tag= element.tags[index];
+            tags.push(tag);
+          }
+          
+          
         }
-        const response = await fetch(`/api/generateImage?prompt=${encodeURIComponent(joinWithComma(prompts)||"utopias")}&remixed=yes`);
-        const data = await response.json();
         
-       
+    
+        const response = await fetch(`/api/generateImage?prompt=${encodeURIComponent(joinWithComma(prompts)||"utopias")}&adjectives=${encodeURIComponent(joinWithComma(tags)||"")}&remixed=yes`);
+        const data = await response.json();
+      
         console.log("data from gen", data);
+        
         setText(data.prompt);
+        setWords(tags);
         
         if (!response.ok) throw new Error(data.error || 'Generation failed');
         // setImage(null);
@@ -76,7 +87,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: I
           sentence: text || "utopias",
           alt: text || "utopias",
           title: text || "utopias",
-          tags: ""
+          tags: joinWithComma(words)
         }),
 
     
@@ -94,6 +105,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: I
       const _imageCardProp: ImageCardProps = {
         title: text,
         url: _image,
+        tags: joinWithComma(words)
    
       };
       poorRemixedImageIntoCouldron(_imageCardProp);
@@ -169,7 +181,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: I
                  <Card 
                   url={image.url}
                   title={image.title}
-           
+                  tags={image.tags}
                 />
 
 

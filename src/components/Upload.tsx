@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 type ImageCardProps = {
   url: string;
   title: string;
-
+  tags: string;
 };
 
 export function Upload() {
@@ -56,6 +56,7 @@ export function Upload() {
           const _imageCardProp: ImageCardProps = {
             title: element.title,
             url: element.url,
+            tags: element.tags
        
           };
           _tempNews.push(_imageCardProp);
@@ -142,6 +143,7 @@ export function Upload() {
     try {
       setUploadLoading(true);
       console.log("uploads image file", _image, text);
+      let tags = joinWithComma(words);
       const response = await fetch(`/api/cloudinary/upload`, {
         method: 'POST',
         headers: {
@@ -152,13 +154,13 @@ export function Upload() {
           sentence: text || "utopias",
           alt: text || "utopias",
           title: text || "utopias",
-          tags: joinWithComma(words)
+          tags: tags
         }),
 
     
       });
   
-      console.log("cloud res", response);
+
       
   
       if (!response.ok) {
@@ -172,7 +174,8 @@ export function Upload() {
       const _imageCardProp: ImageCardProps = {
         title: text,
         url: _image,
-   
+        tags: tags
+
       };
 
       poorImageIntoCouldron(_imageCardProp);

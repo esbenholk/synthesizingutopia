@@ -98,6 +98,7 @@ export async function GET(request: Request) {
 
       prompt,
       imageUrl: image.data[0].url || 'imageurlplaceholder',
+      tags: adjectives
    
     };
     
