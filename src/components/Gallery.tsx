@@ -190,7 +190,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron, shareImage
                   onClick={() => toggleSelection(image)}
                   className="mt-2 flex items-center gap-1"
                 >
-                  {!isSelected ? "Use in Remix" : "Deselect"}
+                  {!isSelected ? "remix" : "fjern fra remix"}
                 </button>
             </div>
           );
@@ -249,7 +249,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron, shareImage
       
                 <div className='uploaderButtons'>
         
-                  <button disabled={loading} className={!loading ? 'active' : 'passive'} onClick={()=> generateImage()}>{generatedImage ? 'regenerate' : 'generate'}</button>
+                  <button disabled={loading} className={!loading ? 'active' : 'passive'} onClick={()=> generateImage()}>{generatedImage ? 'genskab billede' : 'skab billede'}</button>
                   <button
                     type="submit"
                     // disabled={loading || (!text && !image)}
@@ -259,7 +259,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron, shareImage
                       'loading content'
                     ) : (
                       <>
-                        poor into couldron
+                        hæl i kedlen
                       </>
                     )}
                 </button>
@@ -275,7 +275,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron, shareImage
       }
 
 
-      {selectedImages.length >= 2  && <button className={`remixButton ${showRemixer ? 'lil' : '' }`} onClick={() => setShowRemixer(!showRemixer)}>Remix Visions</button>}
+      {selectedImages.length >= 2  && <button className={`remixButton ${showRemixer ? 'lil' : '' }`} onClick={() => setShowRemixer(!showRemixer)}>Remix Billeder</button>}
 
         </>
       )}

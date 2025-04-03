@@ -327,7 +327,7 @@ export function Upload() {
             }
           }
           className="Button Loadmore"        >
-          {isFetchingRecent ? 'expanding...' : 'Get more utopias'}
+          {isFetchingRecent ? 'udvider...' : 'se flere utopier'}
         </button>
       </div>
 
@@ -346,8 +346,8 @@ export function Upload() {
           }
           console.log("check error2", error);
 
-          }}>add vision</button>
-        {!showGallery && <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => setShowGallery(!showGallery)}>explore visions</button>
+          }}>tilføj billede</button>
+        {!showGallery && <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => setShowGallery(!showGallery)}>dyk ned i kedlen</button>
       }
       </div>
 
@@ -395,7 +395,7 @@ export function Upload() {
               id="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="in my utopia there is..."
+              placeholder="i min utopi er der..."
             />
           
 
@@ -406,7 +406,7 @@ export function Upload() {
             onChange={(e) => setCurrentWord(e.target.value)}
             onKeyDown={handleKeyDown}
             className="mt-2 p-2 border rounded-md"
-            placeholder="or add some adjectives"
+            placeholder="eller beskriv med tillægsord"
           />
           <div className="flex-row-wrap adjButtons">
             {words.map((word, index) => (
@@ -460,7 +460,7 @@ export function Upload() {
 
           <div className='uploaderButtons'>
             <label htmlFor="image-upload" className={!loading ? 'imgUploadBtn active' : 'imgUploadBtn passive'}>
-              {image ? 'change' : 'upload'}
+              {image ? 'upload anden' : 'upload ny'}
             </label>
             <input
                     id="image-upload"
@@ -469,7 +469,7 @@ export function Upload() {
                     onChange={handleImageChange}
                     className="sr-only"
             />
-            <button disabled={loading} className={!loading ? 'active' : 'passive'} onClick={()=> generateImage()}>{generatedImage ? 'regenerate' : 'generate'}</button>
+            <button disabled={loading} className={!loading ? 'active' : 'passive'} onClick={()=> generateImage()}>{generatedImage ? 'genskab billede' : 'skab billede'}</button>
             <button
               type="submit"
               // disabled={loading || (!text && !image)}
@@ -479,7 +479,7 @@ export function Upload() {
                 'loading content'
               ) : (
                 <>
-                  poor into couldron
+                  hæl i kedlen
                 </>
               )}
           </button>
@@ -496,7 +496,7 @@ export function Upload() {
       {succes && 
        <div className='success'>
         <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742061490/giphy_knfko7.gif"/>
-        <p>*sympoetic thanx u*</p>
+        <p>*sympoetisk tak*</p>
       </div>     
       }
 
