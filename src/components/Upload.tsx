@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 // import { emitImageUpdate } from '../socket';
 import Gallery from './Gallery';
 import { motion, AnimatePresence } from "framer-motion";
+import { io } from "socket.io-client";
+
+const socket = io("dancingwai-11f115b681e2.herokuapp.com");
 
 type ImageCardProps = {
   url: string;
@@ -20,13 +23,10 @@ export function Upload() {
   const [words, setWords] = useState<string[]>([]);
   const [currentWord, setCurrentWord] = useState<string>("");
   const [succes, setSucces] = useState(false);
-
-
   const [isFetchingRecent, setIsFetchingRecent] = useState(false);
   const [error, setError] = useState<string>("");
   const [news, setNews] = useState<ImageCardProps[]>([]);
   const [loadIndex, setLoadIndex] = useState<number>(0);
-
 
     // Run fetchRecentImages on component mount
   useEffect(() => {
@@ -37,6 +37,37 @@ export function Upload() {
   const loadContent = async () =>{
     await fetchRecentImages();
   }
+
+      
+  useEffect(() => {
+    // Generate or get userId from session storage
+    let storedUserId = sessionStorage.getItem("userId");
+    if (!storedUserId) {
+      storedUserId = Math.random().toString(36).substring(7);
+      sessionStorage.setItem("userId", storedUserId);
+    }
+
+
+    // Listen for messages
+    socket.on("receiveMessage", (message) => {
+      console.log("gets io message", message);
+      
+    });
+
+    	socket.on('connect', () => {
+			      console.log("connects");
+
+			});
+
+   	  socket.on('hello', (msg) => {
+			      console.log("hello", msg);
+
+			});
+
+    return () => {
+      socket.off("receiveMessage");
+    };
+  }, []);
 
   const fetchRecentImages = async () => {
     setIsFetchingRecent(true);
@@ -221,7 +252,13 @@ export function Upload() {
     }
   };
 
+  const shareImageToSocket =  (_image : ImageCardProps) => {
+    socket.emit("hello", _image);
+  }
+
   const poorImageIntoCouldron = (_image : ImageCardProps) => {
+
+    shareImageToSocket(_image);
 
     let tempnews = news;
     tempnews.unshift(_image);
@@ -279,7 +316,7 @@ export function Upload() {
       />
 
       <div className={showGallery ? "GalleryContainer": "GalleryContainer hidden"}>
-        <Gallery news={news} poorRemixedImageIntoCouldron={poorImageIntoCouldron}/>
+        <Gallery news={news} poorRemixedImageIntoCouldron={poorImageIntoCouldron} shareImageToSocket={shareImageToSocket}/>
 
 
         <button

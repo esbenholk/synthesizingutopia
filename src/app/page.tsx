@@ -17,6 +17,8 @@ export default function Home() {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+
   return (
     <main className="dont look under the hood">
                   <img className="logo" style={{maxWidth: windowHeight-50}}src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741868576/logo_efs6jc.gif"/>

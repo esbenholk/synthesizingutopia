@@ -15,7 +15,7 @@ type ImageCardProps = {
 
 
 
-export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: ImageCardProps[], poorRemixedImageIntoCouldron: (image: ImageCardProps) => void }) {
+export default function Gallery({ news, poorRemixedImageIntoCouldron, shareImageToSocket}: { news: ImageCardProps[], poorRemixedImageIntoCouldron: (image: ImageCardProps) => void, shareImageToSocket:  (image: ImageCardProps) => void}) {
   const [showRemixer, setShowRemixer] = useState(false);
   const [text, setText] = useState<string>("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export default function Gallery({ news, poorRemixedImageIntoCouldron}: { news: I
    
       };
       poorRemixedImageIntoCouldron(_imageCardProp);
-
+      shareImageToSocket(_imageCardProp);
       // let tempnews = news;
       // tempnews.unshift(_imageCardProp);
       // setNews(tempnews);
