@@ -9,11 +9,7 @@ cloudinary.config({
 
 export async function POST(request: Request) {
   try {
-    const { imageUrl, sentence, title, tags } = await request.json();
-    
-    console.log("recieves post req:", imageUrl, sentence,title,tags );
-    
-
+    const { imageUrl,  title, tags } = await request.json();
     // Upload image to Cloudinary
     const result = await cloudinary.uploader.upload(imageUrl, {
       folder: 'utopias',
@@ -24,6 +20,9 @@ export async function POST(request: Request) {
       },
       tags: tags, // Cloudinary accepts an array of tags
     });
+
+
+    console.log("uploads img:", result.secure_url );
 
     return NextResponse.json({
       url: result.secure_url,

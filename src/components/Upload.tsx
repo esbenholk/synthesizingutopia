@@ -158,14 +158,14 @@ export function Upload() {
   
       } catch (err) {
 
-        setError("ups it didnt mix");
+        setError("ups det virkede ikke");
         // setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         setLoading(false);
        
       }
     } else {
-        setError("wizard, u need to declare the generation");
+        setError("Alkymist, du må beskrive billedet");
         setLoading(false);
     }
 
@@ -190,6 +190,8 @@ export function Upload() {
 
     
       });
+
+      const data = await response.json();
   
 
       
@@ -202,13 +204,15 @@ export function Upload() {
   
       } 
 
+      
       const _imageCardProp: ImageCardProps = {
         title: text,
-        url: _image,
+        url: data.url,
         tags: tags
 
       };
 
+      shareImageToSocket(_imageCardProp);
       poorImageIntoCouldron(_imageCardProp);
    
       
@@ -258,7 +262,7 @@ export function Upload() {
 
   const poorImageIntoCouldron = (_image : ImageCardProps) => {
 
-    shareImageToSocket(_image);
+
 
     let tempnews = news;
     tempnews.unshift(_image);
@@ -394,6 +398,7 @@ export function Upload() {
             <textarea
               id="text"
               value={text}
+              autoCorrect={"false"}
               onChange={(e) => setText(e.target.value)}
               placeholder="i min utopi er der..."
             />
@@ -403,6 +408,7 @@ export function Upload() {
           <input
             type="text"
             value={currentWord}
+            autoCorrect={"false"}
             onChange={(e) => setCurrentWord(e.target.value)}
             onKeyDown={handleKeyDown}
             className="mt-2 p-2 border rounded-md"
