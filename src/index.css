@@ -517,6 +517,7 @@ select{
     background-color: #6508FF;
     width: calc(100%-20px);
     padding: 10px;
+    display: flex-column;
 }
 .Info p{
     color: #00ff00;
