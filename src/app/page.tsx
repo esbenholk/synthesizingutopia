@@ -42,8 +42,7 @@ export default function Home() {
       />
       <div className="desktopborder1"></div>
       <div className="desktopborder2"></div>
-      {/* <Upload /> */}
-      <h1 className="notification">nyt værk på vej</h1>
+      <Upload />
     </main>
   );
 }
