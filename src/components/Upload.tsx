@@ -346,12 +346,12 @@ export function Upload() {
         )}
       </div>
 
-      <img
+      {/* <img
         className={showGallery ? "overlay openCouldron" : "overlay"}
         src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"
       />
       <div className="desktopborder1"></div>
-      <div className="desktopborder2"></div>
+      <div className="desktopborder2"></div> */}
 
       <AnimatePresence>
         {showUpload && (
@@ -403,7 +403,7 @@ export function Upload() {
                 placeholder="i min utopi er der..."
               />
 
-              <input
+              {/* <input
                 type="text"
                 value={currentWord}
                 autoCorrect={"false"}
@@ -422,7 +422,7 @@ export function Upload() {
                     {word} ✖
                   </button>
                 ))}
-              </div>
+              </div> */}
             </div>
             <div className="imageResult">
               {loading ? (
