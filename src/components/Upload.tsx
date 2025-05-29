@@ -353,7 +353,7 @@ export function Upload() {
       <div className="desktopborder1"></div>
       <div className="desktopborder2"></div> */}
 
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showUpload && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -367,7 +367,7 @@ export function Upload() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
       {showUpload && (
         <>
