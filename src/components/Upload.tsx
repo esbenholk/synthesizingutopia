@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 // import { emitImageUpdate } from '../socket';
-import Gallery from './Gallery';
+import Gallery from "./Gallery";
 import { motion, AnimatePresence } from "framer-motion";
 import { io } from "socket.io-client";
 
@@ -14,7 +14,7 @@ type ImageCardProps = {
 
 export function Upload() {
   const [image, setImage] = useState<string | null>(null);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploadLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -28,17 +28,16 @@ export function Upload() {
   const [news, setNews] = useState<ImageCardProps[]>([]);
   const [loadIndex, setLoadIndex] = useState<number>(0);
 
-    // Run fetchRecentImages on component mount
+  // Run fetchRecentImages on component mount
   useEffect(() => {
-      console.log("renders comp");
-      loadContent();
+    console.log("renders comp");
+    loadContent();
   }, []);
 
-  const loadContent = async () =>{
+  const loadContent = async () => {
     await fetchRecentImages();
-  }
+  };
 
-      
   useEffect(() => {
     // Generate or get userId from session storage
     let storedUserId = sessionStorage.getItem("userId");
@@ -47,22 +46,18 @@ export function Upload() {
       sessionStorage.setItem("userId", storedUserId);
     }
 
-
     // Listen for messages
     socket.on("receiveMessage", (message) => {
       console.log("gets io message", message);
-      
     });
 
-    	socket.on('connect', () => {
-			      console.log("connects");
+    socket.on("connect", () => {
+      console.log("connects");
+    });
 
-			});
-
-   	  socket.on('hello', (msg) => {
-			      console.log("hello", msg);
-
-			});
+    socket.on("hello", (msg) => {
+      console.log("hello", msg);
+    });
 
     return () => {
       socket.off("receiveMessage");
@@ -72,23 +67,24 @@ export function Upload() {
   const fetchRecentImages = async () => {
     setIsFetchingRecent(true);
     // setError(null);
-    
+
     try {
-      const response = await fetch(`/api/cloudinary/recent?skip=${loadIndex}limit=${10}`);
+      const response = await fetch(
+        `/api/cloudinary/recent?skip=${loadIndex}limit=${10}`
+      );
       const data = await response.json();
       let _tempNews = news;
 
       console.log("has images", data, data.length);
-      
-      if(data){
+
+      if (data) {
         for (let index = 0; index < data.length; index++) {
-          const element = data[index];  
-          
+          const element = data[index];
+
           const _imageCardProp: ImageCardProps = {
             title: element.title,
             url: element.url,
-            tags: element.tags
-       
+            tags: element.tags,
           };
           _tempNews.push(_imageCardProp);
         }
@@ -98,20 +94,20 @@ export function Upload() {
         //   }
         // }
 
-
         setNews(_tempNews);
-        setLoadIndex(loadIndex+10)
+        setLoadIndex(loadIndex + 10);
       } else {
         setIsFetchingRecent(false);
       }
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch recent images');
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch recent images"
+      );
     } finally {
       setIsFetchingRecent(false);
     }
   };
-  const showSucces= (duration = 1500) => {
+  const showSucces = (duration = 1500) => {
     setSucces(true); // Show the div
     setTimeout(() => {
       setSucces(false); // Hide it after `duration` ms
@@ -119,10 +115,12 @@ export function Upload() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-
-    
-    if (e.key === " " ||  e.keyCode === 32 || e.keyCode === 0 || e.key === "Enter" ) {
-  
+    if (
+      e.key === " " ||
+      e.keyCode === 32 ||
+      e.keyCode === 0 ||
+      e.key === "Enter"
+    ) {
       e.preventDefault();
       if (currentWord.trim()) {
         setWords([...words, currentWord.trim()]);
@@ -137,95 +135,76 @@ export function Upload() {
   const generateImage = async () => {
     setLoading(true);
 
-
-    if(text != "" || words.length > 0 ){
+    if (text != "" || words.length > 0) {
       try {
-        const response = await fetch(`/api/generateImage?prompt=${encodeURIComponent(text||"utopias")}&adjectives=${encodeURIComponent(joinWithComma(words)||"")}`);
+        const response = await fetch(
+          `/api/generateImage?prompt=${encodeURIComponent(
+            text || "utopias"
+          )}&adjectives=${encodeURIComponent(joinWithComma(words) || "")}`
+        );
         const data = await response.json();
-        
 
         console.log("data from gen", data);
-        
 
-
-        if (!response.ok) throw new Error(data.error || 'Generation failed');
+        if (!response.ok) throw new Error(data.error || "Generation failed");
         setImage(null);
-        setGeneratedImage(data.imageUrl);   
-        
-        
+        setGeneratedImage(data.imageUrl);
+
         // setError("has gen img"  );
         // setText(data.prompt);
-  
       } catch (err) {
-
         setError("ups det virkede ikke");
         // setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         setLoading(false);
-       
       }
     } else {
-        setError("Alkymist, du må beskrive billedet");
-        setLoading(false);
+      setError("Alkymist, du må beskrive billedet");
+      setLoading(false);
     }
-
   };
-  const upLoadImage = async (_image: string) =>{
+  const upLoadImage = async (_image: string) => {
     try {
       setUploadLoading(true);
       console.log("uploads image file", _image, text);
       let tags = joinWithComma(words);
       const response = await fetch(`/api/cloudinary/upload`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           imageUrl: _image,
           sentence: text || "utopias",
           alt: text || "utopias",
           title: text || "utopias",
-          tags: tags
+          tags: tags,
         }),
-
-    
       });
 
       const data = await response.json();
-  
 
-      
-  
       if (!response.ok) {
         const data = await response.json();
         console.log("fails upload to cloud", data);
         setUploadLoading(false);
-        throw new Error(data.error || 'Upload failed');
-  
-      } 
+        throw new Error(data.error || "Upload failed");
+      }
 
-      
       const _imageCardProp: ImageCardProps = {
         title: text,
         url: data.url,
-        tags: tags
-
+        tags: tags,
       };
 
       shareImageToSocket(_imageCardProp);
       poorImageIntoCouldron(_imageCardProp);
-   
-      
-
-
-
     } catch (err) {
       console.log("fails upload to cloud", err);
       setUploadLoading(false);
     } finally {
       console.log("ends upload to cloud");
 
-      
       setLoading(false);
       setUploadLoading(false);
       setShowUpload(false);
@@ -234,12 +213,8 @@ export function Upload() {
       setText("");
       setWords([]);
       setGeneratedImage(null);
- 
-
     }
-
-
-  }
+  };
 
   const handleRemoveWord = (index: number) => {
     setWords(words.filter((_, i) => i !== index));
@@ -256,14 +231,11 @@ export function Upload() {
     }
   };
 
-  const shareImageToSocket =  (_image : ImageCardProps) => {
+  const shareImageToSocket = (_image: ImageCardProps) => {
     socket.emit("hello", _image);
-  }
+  };
 
-  const poorImageIntoCouldron = (_image : ImageCardProps) => {
-
-
-
+  const poorImageIntoCouldron = (_image: ImageCardProps) => {
     let tempnews = news;
     tempnews.unshift(_image);
     setNews(tempnews);
@@ -284,84 +256,89 @@ export function Upload() {
     setText("");
     setWords([]);
     setGeneratedImage(null);
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     console.log("tries to submit image", image);
-    
-    if(image ){
+
+    if (image) {
       upLoadImage(image);
-    } else if(generatedImage) {
+    } else if (generatedImage) {
       upLoadImage(generatedImage);
-    
     } else {
       console.log("make error message");
-      
     }
-
   };
-
-
-
-
 
   return (
     <div className="brew-container">
-      <video 
+      {/* <video 
             className={showGallery ? 'couldron openCouldronVideo' : 'couldron'}
             src={"https://res.cloudinary.com/dmwpm8iiw/video/upload/v1741863927/loopcouldron_svu0rw.mp4?q_auto:eco"} 
             autoPlay 
             loop 
             muted 
             playsInline
-      />
+      /> */}
 
-      <div className={showGallery ? "GalleryContainer": "GalleryContainer hidden"}>
-        <Gallery news={news} poorRemixedImageIntoCouldron={poorImageIntoCouldron} shareImageToSocket={shareImageToSocket}/>
-
+      <div
+        className={showGallery ? "GalleryContainer" : "GalleryContainer hidden"}
+      >
+        <Gallery
+          news={news}
+          poorRemixedImageIntoCouldron={poorImageIntoCouldron}
+          shareImageToSocket={shareImageToSocket}
+        />
 
         <button
-  
           disabled={isFetchingRecent}
-          onClick={()=> {
+          onClick={() => {
             fetchRecentImages();
-            }
-          }
-          className="Button Loadmore"        >
-          {isFetchingRecent ? 'udvider...' : 'se flere utopier'}
+          }}
+          className="Button Loadmore"
+        >
+          {isFetchingRecent ? "udvider..." : "se flere utopier"}
         </button>
       </div>
 
-      <div className='buttons'>
-        <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => {
+      <div className="buttons">
+        <button
+          className={`btn ${showUpload ? "lil" : ""}`}
+          onClick={() => {
+            // console.log("check error1", error);
 
-          // console.log("check error1", error);
-          
-          if(showGallery){
-            setShowGallery(false);
-            setTimeout(() => {
+            if (showGallery) {
+              setShowGallery(false);
+              setTimeout(() => {
                 setShowUpload(true);
-            }, 2000);
-          } else {
-            setShowUpload(!showUpload);
-          }
-          console.log("check error2", error);
-
-          }}>tilføj billede</button>
-        {!showGallery && <button className={`btn ${showUpload ? 'lil' : '' }`} onClick={() => setShowGallery(!showGallery)}>dyk ned i kedlen</button>
-      }
+              }, 2000);
+            } else {
+              setShowUpload(!showUpload);
+            }
+            console.log("check error2", error);
+          }}
+        >
+          tilføj billede
+        </button>
+        {!showGallery && (
+          <button
+            className={`btn ${showUpload ? "lil" : ""}`}
+            onClick={() => setShowGallery(!showGallery)}
+          >
+            dyk ned i kedlen
+          </button>
+        )}
       </div>
 
-
-
-
-      <img className={showGallery ? 'overlay openCouldron' : 'overlay'} src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"/>
-      <div className='desktopborder1'></div>
-      <div className='desktopborder2'></div>
-
+      <img
+        className={showGallery ? "overlay openCouldron" : "overlay"}
+        src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"
+      />
+      <div className="desktopborder1"></div>
+      <div className="desktopborder2"></div>
 
       <AnimatePresence>
         {showUpload && (
@@ -372,78 +349,94 @@ export function Upload() {
             transition={{ duration: 0.5 }}
             className="p-4 bg-gray-200 rounded-lg shadow-md"
           >
-                  <div className="gooey-container">
-           <div className={uploading ? 'shrinkgoo gooey': " gooey"}></div>
-        </div>
+            <div className="gooey-container">
+              <div className={uploading ? "shrinkgoo gooey" : " gooey"}></div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-       {showUpload && <>
-        {error != "" &&
+      {showUpload && (
         <>
-          <div className='errorMessage' onClick={()=> {
-                setError("");
-                setLoading(false);
-                }
-          }
-             >
-            <p>{error}</p>
-          </div>
-        </>}
- 
-        <form onSubmit={handleSubmit} className={uploading ? "uploading uploader" : "uploader"}>
-        <button className="closebtn" onClick={()=> setShowUpload(false)}> X </button>
-          <div className={error != "" ? 'textinputs error' : "textinputs"}>
-            <textarea
-              id="text"
-              value={text}
-              autoCorrect={"false"}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="i min utopi er der..."
-            />
-          
-
-       
-          <input
-            type="text"
-            value={currentWord}
-            autoCorrect={"false"}
-            onChange={(e) => setCurrentWord(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="mt-2 p-2 border rounded-md"
-            placeholder="eller beskriv med tillægsord"
-          />
-          <div className="flex-row-wrap adjButtons">
-            {words.map((word, index) => (
-              <button
-                key={index}
-                onClick={() => handleRemoveWord(index)}
-                className="adjBtn"
-              >
-                {word} ✖
-              </button>
-          
-            ))}
-           </div>
-
-
-          </div>
-          <div className='imageResult'>
-          {loading ? 
+          {error != "" && (
             <>
-              <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742059296/brewing_ruxhpm.gif"/>
-
-            </>
-            : image ? 
-              <div>
-                <button className="closebtn" onClick={()=> setImage(null)}> X </button>
-                <img src={image} alt="Preview" className="subImage" />
+              <div
+                className="errorMessage"
+                onClick={() => {
+                  setError("");
+                  setLoading(false);
+                }}
+              >
+                <p>{error}</p>
               </div>
-            :generatedImage ?
-              <div>
-                <button className="closebtn" onClick={()=> setGeneratedImage(null)}> X </button>
-                <img src={generatedImage} alt="Generated" className="w-full rounded-lg" />
+            </>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className={uploading ? "uploading uploader" : "uploader"}
+          >
+            <button className="closebtn" onClick={() => setShowUpload(false)}>
+              {" "}
+              X{" "}
+            </button>
+            <div className={error != "" ? "textinputs error" : "textinputs"}>
+              <textarea
+                id="text"
+                value={text}
+                autoCorrect={"false"}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="i min utopi er der..."
+              />
+
+              <input
+                type="text"
+                value={currentWord}
+                autoCorrect={"false"}
+                onChange={(e) => setCurrentWord(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="mt-2 p-2 border rounded-md"
+                placeholder="eller beskriv med tillægsord"
+              />
+              <div className="flex-row-wrap adjButtons">
+                {words.map((word, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleRemoveWord(index)}
+                    className="adjBtn"
+                  >
+                    {word} ✖
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="imageResult">
+              {loading ? (
+                <>
+                  <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742059296/brewing_ruxhpm.gif" />
+                </>
+              ) : image ? (
+                <div>
+                  <button className="closebtn" onClick={() => setImage(null)}>
+                    {" "}
+                    X{" "}
+                  </button>
+                  <img src={image} alt="Preview" className="subImage" />
+                </div>
+              ) : generatedImage ? (
+                <div>
+                  <button
+                    className="closebtn"
+                    onClick={() => setGeneratedImage(null)}
+                  >
+                    {" "}
+                    X{" "}
+                  </button>
+                  <img
+                    src={generatedImage}
+                    alt="Generated"
+                    className="w-full rounded-lg"
+                  />
                   {/* <div className="mt-4 flex justify-end gap-2">
                     <button
                       onClick={() => generateImage()}
@@ -458,54 +451,58 @@ export function Upload() {
                       upload image
                     </button>
                   </div> */}
-              
-              </div>
-            : null
-            }
-          </div>
+                </div>
+              ) : null}
+            </div>
 
-          <div className='uploaderButtons'>
-            <label htmlFor="image-upload" className={!loading ? 'imgUploadBtn active' : 'imgUploadBtn passive'}>
-              {image ? 'upload anden' : 'upload ny'}
-            </label>
-            <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="sr-only"
-            />
-            <button disabled={loading} className={!loading ? 'active' : 'passive'} onClick={()=> generateImage()}>{generatedImage ? 'genskab billede' : 'skab billede'}</button>
-            <button
-              type="submit"
-              // disabled={loading || (!text && !image)}
-              className={loading ? "passive" : generatedImage ? 'active' : image ? 'active' : 'passive'}
-            >
-              {loading ? (
-                'loading content'
-              ) : (
-                <>
-                  hæl i kedlen
-                </>
-              )}
-          </button>
-          </div>
-
-         
-
-       
-    
-       
-      </form>
-      
-      </>}
-      {succes && 
-       <div className='success'>
-        <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742061490/giphy_knfko7.gif"/>
-        <p>*sympoetisk tak*</p>
-      </div>     
-      }
-
+            <div className="uploaderButtons">
+              <label
+                htmlFor="image-upload"
+                className={
+                  !loading ? "imgUploadBtn active" : "imgUploadBtn passive"
+                }
+              >
+                {image ? "upload anden" : "upload ny"}
+              </label>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="sr-only"
+              />
+              <button
+                disabled={loading}
+                className={!loading ? "active" : "passive"}
+                onClick={() => generateImage()}
+              >
+                {generatedImage ? "genskab billede" : "skab billede"}
+              </button>
+              <button
+                type="submit"
+                // disabled={loading || (!text && !image)}
+                className={
+                  loading
+                    ? "passive"
+                    : generatedImage
+                    ? "active"
+                    : image
+                    ? "active"
+                    : "passive"
+                }
+              >
+                {loading ? "loading content" : <>hæl i kedlen</>}
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+      {succes && (
+        <div className="success">
+          <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742061490/giphy_knfko7.gif" />
+          <p>*sympoetisk tak*</p>
+        </div>
+      )}
     </div>
   );
 }
