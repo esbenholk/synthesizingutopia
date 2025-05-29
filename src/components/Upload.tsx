@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 // import { emitImageUpdate } from '../socket';
 import Gallery from "./Gallery";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,7 @@ type ImageCardProps = {
 export function Upload() {
   const [image, setImage] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const textArea = useRef<HTMLTextAreaElement>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploadLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -134,6 +135,10 @@ export function Upload() {
   };
   const generateImage = async () => {
     setLoading(true);
+    let text = "";
+    if (textArea.current != null) {
+      text = textArea.current.value;
+    }
 
     if (text != "" || words.length > 0) {
       try {
@@ -166,39 +171,47 @@ export function Upload() {
   const upLoadImage = async (_image: string) => {
     try {
       setUploadLoading(true);
-      console.log("uploads image file", _image, text);
-      let tags = joinWithComma(words);
-      const response = await fetch(`/api/cloudinary/upload`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          imageUrl: _image,
-          sentence: text || "utopias",
-          alt: text || "utopias",
-          title: text || "utopias",
-          tags: tags,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.log("fails upload to cloud", data);
-        setUploadLoading(false);
-        throw new Error(data.error || "Upload failed");
+      let text = "";
+      if (textArea.current != null) {
+        text = textArea.current.value;
       }
 
-      const _imageCardProp: ImageCardProps = {
-        title: text,
-        url: data.url,
-        tags: tags,
-      };
+      if (text != "" || words.length > 0) {
+        let tags = joinWithComma(words);
+        const response = await fetch(`/api/cloudinary/upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            imageUrl: _image,
+            sentence: text || "utopias",
+            alt: text || "utopias",
+            title: text || "utopias",
+            tags: tags,
+          }),
+        });
 
-      shareImageToSocket(_imageCardProp);
-      poorImageIntoCouldron(_imageCardProp);
+        const data = await response.json();
+
+        if (!response.ok) {
+          const data = await response.json();
+          console.log("fails upload to cloud", data);
+          setUploadLoading(false);
+          throw new Error(data.error || "Upload failed");
+        }
+
+        const _imageCardProp: ImageCardProps = {
+          title: text,
+          url: data.url,
+          tags: tags,
+        };
+
+        shareImageToSocket(_imageCardProp);
+        poorImageIntoCouldron(_imageCardProp);
+      } else {
+        setError("Alkymist, du må beskrive billedet");
+      }
     } catch (err) {
       console.log("fails upload to cloud", err);
       setUploadLoading(false);
@@ -382,10 +395,11 @@ export function Upload() {
             </button>
             <div className={error != "" ? "textinputs error" : "textinputs"}>
               <textarea
+                ref={textArea}
                 id="text"
-                value={text}
+                // value={text}
                 autoCorrect={"false"}
-                onChange={(e) => setText(e.target.value)}
+                // onChange={(e) => setText(e.target.value)}
                 placeholder="i min utopi er der..."
               />
 
