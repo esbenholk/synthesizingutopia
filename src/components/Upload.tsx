@@ -130,6 +130,18 @@ export function Upload() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.endsWith(" ") || value.endsWith("\n")) {
+      if (currentWord.trim()) {
+        setWords([...words, currentWord.trim()]);
+        setCurrentWord("");
+      }
+    } else {
+      setCurrentWord(value);
+    }
+  };
+
   const joinWithComma = (words: string[]): string => {
     return words.join(", ");
   };
@@ -156,7 +168,7 @@ export function Upload() {
         setGeneratedImage(data.imageUrl);
 
         // setError("has gen img"  );
-        // setText(data.prompt);
+        setText(data.prompt);
       } catch (err) {
         setError("ups det virkede ikke");
         // setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -395,36 +407,44 @@ export function Upload() {
               {" "}
               X{" "}
             </button>
-            <div className={error != "" ? "textinputs error" : "textinputs"}>
-              <textarea
-                ref={textArea}
-                id="text"
-                // value={text}
-                autoCorrect={"false"}
-                // onChange={(e) => setText(e.target.value)}
-                placeholder="i min utopi er der..."
-              />
-
+            <div className="uploaderButtons">
+              <label
+                htmlFor="image-upload"
+                className={
+                  !loading ? "imgUploadBtn active" : "imgUploadBtn passive"
+                }
+              >
+                {image ? "upload anden" : "upload ny"}
+              </label>
               <input
-                type="text"
-                value={currentWord}
-                autoCorrect={"false"}
-                onChange={(e) => setCurrentWord(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="mt-2 p-2 border rounded-md"
-                placeholder="eller beskriv med tillægsord"
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="sr-only"
               />
-              <div className="flex-row-wrap adjButtons">
-                {words.map((word, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleRemoveWord(index)}
-                    className="adjBtn"
-                  >
-                    {word} ✖
-                  </button>
-                ))}
-              </div>
+              <button
+                disabled={loading}
+                className={!loading ? "active" : "passive"}
+                onClick={() => generateImage()}
+              >
+                {generatedImage ? "genskab billede" : "skab billede"}
+              </button>
+              <button
+                type="submit"
+                // disabled={loading || (!text && !image)}
+                className={
+                  loading
+                    ? "passive"
+                    : generatedImage
+                    ? "active"
+                    : image
+                    ? "active"
+                    : "passive"
+                }
+              >
+                {loading ? "loading content" : <>hæl i kedlen</>}
+              </button>
             </div>
             <div className="imageResult">
               {loading ? (
@@ -470,45 +490,37 @@ export function Upload() {
                 </div>
               ) : null}
             </div>
-
-            <div className="uploaderButtons">
-              <label
-                htmlFor="image-upload"
-                className={
-                  !loading ? "imgUploadBtn active" : "imgUploadBtn passive"
-                }
-              >
-                {image ? "upload anden" : "upload ny"}
-              </label>
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="sr-only"
+            <div className={error != "" ? "textinputs error" : "textinputs"}>
+              <textarea
+                ref={textArea}
+                id="text"
+                value={text}
+                autoCorrect={"false"}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="i min utopi er der..."
               />
-              <button
-                disabled={loading}
-                className={!loading ? "active" : "passive"}
-                onClick={() => generateImage()}
-              >
-                {generatedImage ? "genskab billede" : "skab billede"}
-              </button>
-              <button
-                type="submit"
-                // disabled={loading || (!text && !image)}
-                className={
-                  loading
-                    ? "passive"
-                    : generatedImage
-                    ? "active"
-                    : image
-                    ? "active"
-                    : "passive"
-                }
-              >
-                {loading ? "loading content" : <>hæl i kedlen</>}
-              </button>
+            </div>
+            <div className={error != "" ? "wordinputs error" : "wordinputs"}>
+              <input
+                type="text"
+                value={currentWord}
+                autoCorrect={"false"}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                className="mt-2 p-2 border rounded-md"
+                placeholder="eller beskriv med tillægsord"
+              />
+              <div className="flex-row-wrap adjButtons">
+                {words.map((word, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleRemoveWord(index)}
+                    className="adjBtn"
+                  >
+                    {word} ✖
+                  </button>
+                ))}
+              </div>
             </div>
           </form>
         </>

@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { NextResponse } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -9,29 +9,31 @@ cloudinary.config({
 
 export async function POST(request: Request) {
   try {
-    const { imageUrl,  title, tags } = await request.json();
+    const { imageUrl, title, tags } = await request.json();
     // Upload image to Cloudinary
+
+    console.log(imageUrl, title, tags);
+
     const result = await cloudinary.uploader.upload(imageUrl, {
-      folder: 'utopias',
-  
+      folder: "utopias",
+
       context: {
         alt: title,
         caption: title,
       },
-      tags: tags, // Cloudinary accepts an array of tags
+      tags: tags ? tags : ["tag"], // Cloudinary accepts an array of tags
     });
 
-
-    console.log("uploads img:", result.secure_url );
+    console.log("uploads img:", result.secure_url);
 
     return NextResponse.json({
       url: result.secure_url,
-      publicId: result.public_id
+      publicId: result.public_id,
     });
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error("Cloudinary upload error:", error);
     return NextResponse.json(
-      { error: 'Failed to upload image' },
+      { error: "Failed to upload image" },
       { status: 500 }
     );
   }
