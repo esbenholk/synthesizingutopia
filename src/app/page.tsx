@@ -25,7 +25,7 @@ export default function Home() {
         src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741868576/logo_efs6jc.gif"
       />
 
-      {/* <video
+      <video
         className={"couldron"}
         src={
           "https://res.cloudinary.com/dmwpm8iiw/video/upload/v1741863927/loopcouldron_svu0rw.mp4?q_auto:eco"
@@ -34,14 +34,14 @@ export default function Home() {
         loop
         muted
         playsInline
-      /> */}
+      />
 
-      {/* <img
+      <img
         className={"overlay"}
         src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"
       />
       <div className="desktopborder1"></div>
-      <div className="desktopborder2"></div> */}
+      <div className="desktopborder2"></div>
       <Upload />
     </main>
   );
