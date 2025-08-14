@@ -1,16 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 // import { emitImageUpdate } from '../socket';
 import Gallery from "./Gallery";
-import { motion, AnimatePresence } from "framer-motion";
 import { io } from "socket.io-client";
+import { ImageCardProps } from "./imageCardProps";
 
 const socket = io("dancingwai-11f115b681e2.herokuapp.com");
-
-type ImageCardProps = {
-  url: string;
-  title: string;
-  tags: string;
-};
 
 export function Upload() {
   const [image, setImage] = useState<string | null>(null);
@@ -28,6 +22,7 @@ export function Upload() {
   const [error, setError] = useState<string>("");
   const [news, setNews] = useState<ImageCardProps[]>([]);
   const [loadIndex, setLoadIndex] = useState<number>(0);
+  const [remixedPrompt, setRemixedPrompt] = useState("");
 
   // Run fetchRecentImages on component mount
   useEffect(() => {
@@ -76,9 +71,9 @@ export function Upload() {
       const data = await response.json();
       let _tempNews = news;
 
-      console.log("has images", data, data.length);
-
       if (data) {
+        console.log("gets data", data);
+
         for (let index = 0; index < data.length; index++) {
           const element = data[index];
 
@@ -86,14 +81,18 @@ export function Upload() {
             title: element.title,
             url: element.url,
             tags: element.tags,
+            aiCaption: element.aiCaption,
+            description: element.description || "Untitled",
+            aiTitle: element.aiTitle,
+            aiVibe: element.aiVibe,
+            aiPolitics: element.aiPolitics,
+            aiObjects: element.aiObjects,
+            aiStory: element.aiStory,
+            id: element.id,
+            parentIds: element.parentIds,
           };
           _tempNews.push(_imageCardProp);
         }
-        // if(news.length > 0){
-        //   for (let index = 0; index < news.length; index++) {
-        //     _tempNews.push(news[index]);
-        //   }
-        // }
 
         setNews(_tempNews);
         setLoadIndex(loadIndex + 10);
@@ -145,6 +144,7 @@ export function Upload() {
   const joinWithComma = (words: string[]): string => {
     return words.join(", ");
   };
+
   const generateImage = async () => {
     setLoading(true);
     let text = "";
@@ -157,26 +157,27 @@ export function Upload() {
         const response = await fetch(
           `/api/generateImage?prompt=${encodeURIComponent(
             text || "utopias"
-          )}&adjectives=${encodeURIComponent(joinWithComma(words) || "")}`
+          )}&remixed=yes&adjectives=${encodeURIComponent(
+            joinWithComma(words) || ""
+          )}`
         );
         const data = await response.json();
-
-        console.log("data from gen", data);
 
         if (!response.ok) throw new Error(data.error || "Generation failed");
         setImage(null);
         setGeneratedImage(data.imageUrl);
+        setRemixedPrompt(data.remixedPrompt);
 
         // setError("has gen img"  );
         setText(data.prompt);
       } catch (err) {
-        setError("ups det virkede ikke");
+        setError("that didnt work");
         // setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         setLoading(false);
       }
     } else {
-      setError("Alkymist, du må beskrive billedet");
+      setError("Alchymist, you need to describe your utopia fragment");
       setLoading(false);
     }
   };
@@ -188,7 +189,7 @@ export function Upload() {
         text = textArea.current.value;
       }
 
-      if (text != "" || words.length > 0) {
+      if (_image != null) {
         let tags = joinWithComma(words);
         const response = await fetch(`/api/cloudinary/upload`, {
           method: "POST",
@@ -197,9 +198,7 @@ export function Upload() {
           },
           body: JSON.stringify({
             imageUrl: _image,
-            sentence: text || "utopias",
-            alt: text || "utopias",
-            title: text || "utopias",
+            title: text || "_",
             tags: tags,
           }),
         });
@@ -208,32 +207,44 @@ export function Upload() {
 
         if (!response.ok) {
           const data = await response.json();
-          console.log("fails upload to cloud", data);
+          setError("sorry Alchemist, this image is bad");
+
           setUploadLoading(false);
           throw new Error(data.error || "Upload failed");
+        } else {
+          console.log("poors into couldron", data);
+
+          const _imageCardProp: ImageCardProps = {
+            title: data.title,
+            url: data.url,
+            tags: data.tags,
+            aiCaption: data.caption,
+            description: data.alt || "Untitled",
+            aiTitle: data.ai_title,
+            aiVibe: data.ai_vibe,
+            aiPolitics: data.ai_political_state,
+            aiObjects: data.ai_objects,
+            aiStory: data.ai_extended_story,
+            id: data.id,
+            parentIds: data.parentIds,
+          };
+
+          shareImageToSocket(_imageCardProp);
+          poorImageIntoCouldron(_imageCardProp);
         }
-
-        const _imageCardProp: ImageCardProps = {
-          title: text,
-          url: data.url,
-          tags: tags,
-        };
-
-        shareImageToSocket(_imageCardProp);
-        poorImageIntoCouldron(_imageCardProp);
       } else {
-        setError("Alkymist, du må beskrive billedet");
+        setError("Alchymist, you need to invent a scene");
       }
     } catch (err) {
-      console.log("fails upload to cloud", err);
+      setError("sorry Alchemist, this image is bad");
+
       setUploadLoading(false);
     } finally {
       console.log("ends upload to cloud");
-
       setLoading(false);
       setUploadLoading(false);
       setShowUpload(false);
-      showSucces();
+      // showSucces();
       setImage(null);
       setText("");
       setWords([]);
@@ -276,7 +287,6 @@ export function Upload() {
     setLoading(false);
     setUploadLoading(false);
     setShowUpload(false);
-    showSucces();
     setImage(null);
     setText("");
     setWords([]);
@@ -287,7 +297,7 @@ export function Upload() {
     e.preventDefault();
     setLoading(true);
 
-    console.log("tries to submit image", image);
+    console.log("tries to submit image", image, generatedImage);
 
     if (image) {
       upLoadImage(image);
@@ -336,6 +346,7 @@ export function Upload() {
           className={`btn ${showUpload ? "lil" : ""}`}
           onClick={() => {
             // console.log("check error1", error);
+            setText("");
 
             if (showGallery) {
               setShowGallery(false);
@@ -348,14 +359,14 @@ export function Upload() {
             console.log("check error2", error);
           }}
         >
-          tilføj billede
+          add a utopia fragment
         </button>
         {!showGallery && (
           <button
             className={`btn ${showUpload ? "lil" : ""}`}
             onClick={() => setShowGallery(!showGallery)}
           >
-            dyk ned i kedlen
+            dive into the potion
           </button>
         )}
       </div>
@@ -385,20 +396,7 @@ export function Upload() {
 
       {showUpload && (
         <>
-          {error != "" && (
-            <>
-              <div
-                className="errorMessage"
-                onClick={() => {
-                  setError("");
-                  setLoading(false);
-                }}
-              >
-                <p>{error}</p>
-              </div>
-            </>
-          )}
-
+          <div className="backdrop"></div>
           <form
             onSubmit={handleSubmit}
             className={uploading ? "uploading uploader" : "uploader"}
@@ -414,7 +412,7 @@ export function Upload() {
                   !loading ? "imgUploadBtn active" : "imgUploadBtn passive"
                 }
               >
-                {image ? "upload anden" : "upload ny"}
+                {image ? "upload another image" : "upload new image"}
               </label>
               <input
                 id="image-upload"
@@ -428,7 +426,7 @@ export function Upload() {
                 className={!loading ? "active" : "passive"}
                 onClick={() => generateImage()}
               >
-                {generatedImage ? "genskab billede" : "skab billede"}
+                {generatedImage ? "recreate image" : "create image"}
               </button>
               <button
                 type="submit"
@@ -443,7 +441,7 @@ export function Upload() {
                     : "passive"
                 }
               >
-                {loading ? "loading content" : <>hæl i kedlen</>}
+                {loading ? "loading content" : <>pour into potion</>}
               </button>
             </div>
             <div className="imageResult">
@@ -497,7 +495,7 @@ export function Upload() {
                 value={text}
                 autoCorrect={"false"}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="i min utopi er der..."
+                placeholder="in my utopia there is... "
               />
             </div>
             <div className={error != "" ? "wordinputs error" : "wordinputs"}>
@@ -508,7 +506,7 @@ export function Upload() {
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 className="mt-2 p-2 border rounded-md"
-                placeholder="eller beskriv med tillægsord"
+                placeholder="or describe it with adjectives"
               />
               <div className="flex-row-wrap adjButtons">
                 {words.map((word, index) => (
@@ -528,7 +526,19 @@ export function Upload() {
       {succes && (
         <div className="success">
           <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742061490/giphy_knfko7.gif" />
-          <p>*sympoetisk tak*</p>
+          <p>*sympoetic thanx u*</p>
+        </div>
+      )}
+
+      {error != "" && (
+        <div
+          className="errorMessage"
+          onClick={() => {
+            setError("");
+            setLoading(false);
+          }}
+        >
+          <p>{error}</p>
         </div>
       )}
     </div>

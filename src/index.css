@@ -59,6 +59,20 @@ button {
   z-index: 99;
   background: radial-gradient(circle, #6508ff 0%, rgba(0, 0, 0, 0) 100%);
 }
+.backdrop {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgb(146, 0, 255);
+  z-index: 0;
+  background: radial-gradient(circle, #6508ff 0%, rgba(0, 0, 0, 0) 100%);
+}
 .errorMessage p {
   color: rgba(63, 255, 10, 1);
 }
@@ -99,7 +113,7 @@ button {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: calc(100% - 40px);
+  width: calc(100% - 30px);
   height: calc(70% - 20px);
 
   padding: 10px;
@@ -109,7 +123,7 @@ button {
   justify-content: center; /* Centers content vertically */
   gap: 10px; /* Adds spacing between child elements */
   box-sizing: border-box;
-  transition: all 4s;
+  transition: all 15s;
   /* overflow-y: scroll; */
 }
 .uploading {
@@ -266,6 +280,9 @@ input[type="file"] {
   top: 100%;
   width: 90%;
 }
+.miniButton {
+  flex: 0.2 !important;
+}
 
 .gooey-container {
   position: fixed;
@@ -324,18 +341,24 @@ input[type="file"] {
   opacity: 0;
 }
 
-.success img,
-.success p {
-  color: rgba(63, 255, 10, 1);
+.success {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -100%);
-
+  transform: translate(-50%, -50%);
   z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
+.success img {
+  width: 150%;
+}
+
 .success p {
-  transform: translate(-50%, -100px);
+  color: rgba(63, 255, 10, 1);
+  /* transform: translate(-50%, -100px); */
 }
 
 @keyframes morph {
@@ -427,7 +450,7 @@ input[type="file"] {
   flex: 0 0 auto; /* Fixed height */
 }
 .selectedImages button {
-  flex: 0.2;
+  flex: 1;
   background-color: rgba(0, 0, 0, 0);
   padding: 0;
   margin: 0;
@@ -479,7 +502,7 @@ select {
 
 .Card {
   width: 600px;
-  max-width: 70%;
+  max-width: 90%;
   position: relative;
   margin-bottom: 20px;
   border: 2px solid #00ff00;
@@ -513,7 +536,7 @@ select {
 .Card:first-of-type {
   margin-top: 200px;
 }
-.Card div {
+.Card div:first-of-type {
   position: relative;
   border-radius: 15px;
   overflow: hidden;
@@ -535,19 +558,26 @@ select {
   background-color: #6508ff;
   width: calc(100%-20px);
   padding: 10px;
-  display: flex-column;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 15px;
 }
+
 .Info p {
   color: #00ff00;
   margin: 0;
 }
-.Info span {
+.Input img {
+  max-width: 40%;
+}
+/* .Info span {
   text-transform: uppercase;
   color: red;
   margin: 0;
   margin-right: 10px;
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-}
+} */
 
 .notification {
   position: fixed;
@@ -641,4 +671,48 @@ select {
     width: 700px;
     height: 700px;
   }
+}
+
+.Info .tags {
+  padding-top: 20px;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding-bottom: 5px;
+  justify-content: flex-end !important;
+}
+
+.Info .title {
+  border-bottom: 2px solid #00ff00;
+}
+.Info .politics {
+  text-align: right;
+  margin-bottom: 10px;
+}
+.Info .input {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 5px;
+  max-width: 70%;
+  align-self: flex-end;
+  border-bottom: 2px solid #00ff00;
+  border-top: 2px solid #00ff00;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-radius: 0px !important;
+}
+.Info .input p {
+  text-align: right;
+}
+
+.Info .tags span {
+  color: #00ff00;
+  margin-left: 5px;
+  font-size: 10px;
+}
+
+.galleryUploaderButtons {
+  justify-content: center;
 }
