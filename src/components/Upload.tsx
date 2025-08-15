@@ -357,7 +357,7 @@ export function Upload() {
             console.log("check error2", error);
           }}
         >
-          add a utopia fragment
+          add utopia fragment
         </button>
         {!showGallery && (
           <button

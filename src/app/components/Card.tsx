@@ -26,6 +26,10 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
     } else {
       setParentIds([]);
     }
+
+    if (data.tags.length > 20) {
+      data.tags = data.tags.slice(0, 20);
+    }
   }, [data]);
 
   return (
@@ -63,15 +67,10 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
         <div className="tags">
           {data.tags &&
             data.tags.map((tag, index) => (
-              <>
-                {" "}
-                {index < 20 && (
-                  <span key={index}>
-                    {tag}
-                    {/* {index !== tags.length - 1 && "--"} */}
-                  </span>
-                )}
-              </>
+              <span key={index}>
+                {tag}
+                {/* {index !== tags.length - 1 && "--"} */}
+              </span>
             ))}
         </div>
       </div>

@@ -11,7 +11,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {" "}
         <link
           rel="icon"
           href={`https://res.cloudinary.com/dmwpm8iiw/image/upload/v1755240875/favicon_muszun.ico`}

@@ -165,6 +165,7 @@ input[type="file"] {
   align-items: center;
   justify-content: center;
   transition: all 1s;
+  text-wrap: nowrap;
 }
 .uploaderButtons button:last-of-type {
   width: 100%;
