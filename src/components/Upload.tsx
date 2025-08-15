@@ -21,7 +21,7 @@ export function Upload() {
   const [isFetchingRecent, setIsFetchingRecent] = useState(false);
   const [error, setError] = useState<string>("");
   const [news, setNews] = useState<ImageCardProps[]>([]);
-  const [loadIndex, setLoadIndex] = useState<number>(0);
+  const [loadIndex, setLoadIndex] = useState<number>(10);
   const [remixedPrompt, setRemixedPrompt] = useState("");
 
   // Run fetchRecentImages on component mount
