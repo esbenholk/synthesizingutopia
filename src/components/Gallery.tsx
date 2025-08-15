@@ -40,7 +40,7 @@ export default function Gallery({
         let ids = [];
         for (let index = 0; index < selectedImages.length; index++) {
           const element = selectedImages[index];
-          prompts.push(element.aiCaption);
+          prompts.push(element.description);
           ids.push(element.url);
           for (let index = 0; index < element.tags.length; index++) {
             const tag = element.tags[index];
