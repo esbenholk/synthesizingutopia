@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     const data = {
       prompt,
       remixedPrompt: sentence,
-      imageUrl: image.data[0].url || "imageurlplaceholder",
+      imageUrl: image.data ? image.data[0].url : "imageurlplaceholder",
       tags: adjectives,
     };
 
