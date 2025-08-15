@@ -156,7 +156,7 @@ export async function POST(request: Request) {
           ai_objects: (payload.objects || []).slice(0, 5).join(", "),
           ai_scenes: (payload.scenes || []).join(", "),
           ai_extended_story: payload.extended_story,
-          parentIds: parentIds != null && parentIds,
+          parentIds: parentIds != null ? parentIds : "",
         },
       });
 

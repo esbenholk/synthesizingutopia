@@ -134,6 +134,8 @@ export default function Gallery({
         throw new Error(data.error || "Upload failed");
       }
 
+      console.log("remixes", data);
+
       const _imageCardProp: ImageCardProps = {
         title: data.title,
         url: data.url,
@@ -230,7 +232,14 @@ export default function Gallery({
 
           {showRemixer && (
             <>
-              <div className="backdrop"></div>
+              <div className="backdrop">
+                {uploading && (
+                  <img
+                    className={"loadingAnim"}
+                    src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1755241109/uploader_oxznq4.png"
+                  />
+                )}
+              </div>
 
               <form
                 onSubmit={handleSubmit}

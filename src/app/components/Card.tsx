@@ -14,10 +14,17 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
           if (Array.isArray(parsed)) {
             setParentIds(parsed);
           }
+
+          console.log("has url array", parsed);
         } catch (err) {
+          setParentIds([]);
           console.error("Invalid parentIds JSON:", err);
         }
+      } else {
+        setParentIds([]);
       }
+    } else {
+      setParentIds([]);
     }
   }, [data]);
 
@@ -32,12 +39,12 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
 
         {data.aiStory && <p className="story"> "{data.aiStory}"</p>}
 
-        {data.title && data.parentIds == null ? (
+        {data.title && parentIds.length == 0 ? (
           <div className="input">
             <p>user input:</p>
             <p>{data.title === "_" ? "original image" : data.title}</p>
           </div>
-        ) : parentIds != null ? (
+        ) : parentIds.length > 0 ? (
           <div className="input">
             <p>user input:</p>
             {parentIds.map((element, index) => (
@@ -56,10 +63,15 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
         <div className="tags">
           {data.tags &&
             data.tags.map((tag, index) => (
-              <span key={index}>
-                {tag}
-                {/* {index !== tags.length - 1 && "--"} */}
-              </span>
+              <>
+                {" "}
+                {index < 20 && (
+                  <span key={index}>
+                    {tag}
+                    {/* {index !== tags.length - 1 && "--"} */}
+                  </span>
+                )}
+              </>
             ))}
         </div>
       </div>

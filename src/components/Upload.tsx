@@ -320,7 +320,6 @@ export function Upload() {
         muted
         playsInline
       />
-
       <div
         className={showGallery ? "GalleryContainer" : "GalleryContainer hidden"}
       >
@@ -337,10 +336,9 @@ export function Upload() {
           }}
           className="Button Loadmore"
         >
-          {isFetchingRecent ? "udvider..." : "se flere utopier"}
+          {isFetchingRecent ? "expanding..." : "load more utopia fragments"}
         </button>
       </div>
-
       <div className="buttons">
         <button
           className={`btn ${showUpload ? "lil" : ""}`}
@@ -370,14 +368,14 @@ export function Upload() {
           </button>
         )}
       </div>
-
       <img
         className={showGallery ? "overlay openCouldron" : "overlay"}
         src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"
-      />
-      <div className="desktopborder1"></div>
-      <div className="desktopborder2"></div>
-
+      />{" "}
+      <div
+        className={showGallery ? "expand desktopborder1" : "desktopborder1"}
+      ></div>
+      {/* <div className="desktopborder2"></div> */}
       {/* <AnimatePresence>
         {showUpload && (
           <motion.div
@@ -393,10 +391,17 @@ export function Upload() {
           </motion.div>
         )}
       </AnimatePresence> */}
-
       {showUpload && (
         <>
-          <div className="backdrop"></div>
+          <div className="backdrop">
+            {" "}
+            {uploading && (
+              <img
+                className={"loadingAnim"}
+                src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1755241109/uploader_oxznq4.png"
+              />
+            )}
+          </div>
           <form
             onSubmit={handleSubmit}
             className={uploading ? "uploading uploader" : "uploader"}
@@ -529,7 +534,6 @@ export function Upload() {
           <p>*sympoetic thanx u*</p>
         </div>
       )}
-
       {error != "" && (
         <div
           className="errorMessage"

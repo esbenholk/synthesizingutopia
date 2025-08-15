@@ -40,8 +40,8 @@ export default function Home() {
         className={"overlay"}
         src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1741865808/couldronoverlay_bg8osp.png"
       />
-      <div className="desktopborder1"></div>
-      <div className="desktopborder2"></div>
+      {/* <div className="desktopborder1"></div>
+      <div className="desktopborder2"></div> */}
       <Upload />
     </main>
   );

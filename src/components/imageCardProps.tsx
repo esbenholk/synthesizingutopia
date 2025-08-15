@@ -10,5 +10,5 @@ export type ImageCardProps = {
   aiPolitics: string;
   aiObjects: string;
   aiStory: string;
-  parentIds: string[];
+  parentIds: string;
 };

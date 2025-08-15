@@ -126,14 +126,23 @@ button {
   justify-content: center; /* Centers content vertically */
   gap: 10px; /* Adds spacing between child elements */
   box-sizing: border-box;
-  transition: all 15s;
+  transition: all 25s;
   /* overflow-y: scroll; */
 }
 .uploading {
-  width: 20px;
-  height: 20px;
-  transform: translate(-50%, -50%) rotate(360deg);
+  width: 0px;
+  height: 0px;
+  transform: translate(-50%, -50%) rotate(666deg);
   overflow: hidden;
+}
+
+.loadingAnim {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 380px;
+  animation: rotate 20s linear infinite;
 }
 
 input[type="file"] {
@@ -648,15 +657,21 @@ select {
     display: block;
     position: fixed;
     background-color: #e100ff;
-    height: 100%;
-    width: 10%;
-    top: 0;
-  }
-  .desktopborder1 {
+    bottom: 0;
     left: 0;
-  }
-  .desktopborder2 {
     right: 0;
+    top: 0;
+    transition: all 2s;
+    background: radial-gradient(
+      circle 500px at center,
+      /* size and position of hole */ transparent 500px,
+      /* hole is transparent */ rgba(101, 8, 255, 1) 101px
+        /* rest of div is filled */
+    );
+    pointer-events: none;
+  }
+  .expand {
+    transform: scale(2);
   }
   .logo {
     position: absolute;
