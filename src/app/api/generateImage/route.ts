@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       messages: [
         {
           role: "user",
-          content: `pretend that you are an image prompt engineer that is trying to depict a world. We need to write an image prompt that expands on and depicts the following sentence: There is... ${prompt}. The world should fit this vibe: ${adjectives},  please output an image prompt in english`,
+          content: `pretend that you are an image prompt engineer that is trying to depict a scene in a world. We need to write an image prompt that expands on and depicts the following sentence: There is... ${prompt}. The world should fit this vibe: ${adjectives} and be in the style of mediaval drawings or post-internet graphics and sci-fi,  please output an image prompt in english`,
         },
       ],
       max_tokens: 100,
@@ -36,14 +36,14 @@ export async function GET(request: Request) {
     const sentence = completion.choices[0].message.content || "";
     sentence.replace('"', "");
 
-    console.log("has openai sentence", sentence);
+    let styleSuffix =
+      "the image should be in the style of mideaval drawings, fantasy, post-internet graphics and sci-fi. the image is not allowed to show any caption or UI element.";
 
     // Generate image using DALL-E
     const image = await openai.images.generate({
       model: "dall-e-3",
-      prompt:
-        sentence +
-        "the image should be inspired by mideaval drawings, utopia imagery, fantasy, post-internet graphics and sci-fi. the image is not allowed to show any caption or UI element.",
+      prompt: `${sentence}\n${styleSuffix}`.trim(),
+
       n: 1,
       size: "1024x1024",
     });
