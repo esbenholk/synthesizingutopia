@@ -60,7 +60,12 @@ export async function POST(request: Request) {
     });
 
     let remixedPrompt = completion.choices[0].message.content || "";
-    remixedPrompt = remixedPrompt.replaceAll('"', "").trim();
+    remixedPrompt = remixedPrompt
+      .replaceAll('"', "")
+      .replaceAll("** imageprompt **", "")
+      .replaceAll("*", "")
+      .replaceAll("Image Prompt:", "")
+      .trim();
 
     // 2) Generate image (use base64 -> data URI for direct upload)
     const imageGen = await openai.images.generate({
