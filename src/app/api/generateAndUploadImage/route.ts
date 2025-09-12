@@ -46,6 +46,8 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log("getting ready to make img:" + prompt);
+
     // 1) Expand prompt (cheap text model is fine; keep your original wording)
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -67,6 +69,8 @@ export async function POST(request: Request) {
       .replaceAll("Image Prompt:", "")
       .trim();
 
+    console.log("has prompt:" + remixedPrompt);
+
     // 2) Generate image (use base64 -> data URI for direct upload)
     const imageGen = await openai.images.generate({
       model: "dall-e-3",
@@ -80,6 +84,8 @@ export async function POST(request: Request) {
 
     const b64 = imageGen.data?.[0]?.b64_json;
     const remoteUrl = imageGen.data?.[0]?.url;
+
+    console.log("has image:" + remoteUrl);
 
     if (!b64 && !remoteUrl) {
       return NextResponse.json(
@@ -97,8 +103,8 @@ export async function POST(request: Request) {
     const uploadResult = await cloudinary.uploader.upload(uploadSource, {
       folder,
       context: {
-        alt: title || remixedPrompt,
-        caption: title || remixedPrompt,
+        alt: "sampl",
+        caption: "sampl",
         parentIds: parentIds != null ? String(parentIds) : "",
       },
       moderation:
@@ -115,6 +121,8 @@ export async function POST(request: Request) {
         "gambling:ignore",
     });
 
+    console.log("uploadresult:" + uploadResult);
+
     // 4) Moderation check
     const moderationArr = (uploadResult as any).moderation as
       | {
@@ -128,6 +136,8 @@ export async function POST(request: Request) {
       (m) => m.status === "rejected" && m.kind?.startsWith("aws_rek")
     );
 
+    console.log("checks for decency" + wasRejected + moderationArr);
+
     if (wasRejected) {
       return NextResponse.json(
         { error: "image does not adhere to our policy" },
@@ -135,19 +145,17 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log("image was not rejected:" + !wasRejected);
+
     // 5) Vision pass to extract metadata (same prompt you used)
     const visionPrompt = `
-You will be given an image of a "Utopia" and the intended title: "${
-      title || remixedPrompt
-    }".
+You will be given an image of a "Utopia" and the intended title: "${prompt}".
 
 Return ONLY minified JSON with these keys:
 {"title":"","caption":"","altText":"","extended_story":"","political_state":"","tags":[],"vibe":[],"objects":[],"scenes":[]}
 
 Rules:
-- "title": ≤ 7 words, aligned with "${
-      title || remixedPrompt
-    }" (refine if needed).
+- "title": ≤ 7 words, aligned with "${prompt}" (refine if needed).
 - "caption": ≤ 2 sentences, start with "in our utopia there is".
 - "altText": ≤ 15 words, describing neutrally the image. 
 - "extended_story": ≤ 3 sentences fiction inside the image. imagine you are telling a story set in the image.
@@ -170,14 +178,17 @@ Rules:
       ];
 
     const vision = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo",
       messages: visionMessages,
       temperature: 0.3,
       response_format: { type: "json_object" },
-      max_tokens: 400,
+      max_tokens: 800,
     });
 
     const raw = vision.choices[0]?.message?.content ?? "{}";
+
+    console.log("has json analysis:" + raw);
+
     let ai: any = {};
     try {
       ai = JSON.parse(raw);
@@ -211,6 +222,8 @@ Rules:
       .filter(Boolean);
 
     const finalTags = dedupLower([...mergedTags, ...userTags]);
+
+    console.log("has tags:" + finalTags);
 
     // 6) Enrich the uploaded asset with tags/context
     await cloudinary.uploader.explicit(uploadResult.public_id, {
