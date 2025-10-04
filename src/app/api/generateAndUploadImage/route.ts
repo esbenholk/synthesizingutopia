@@ -242,6 +242,8 @@ Rules:
       },
     });
 
+    console.log("does upload");
+
     // 7) Return everything the client likely needs (including the remixed prompt)
     return NextResponse.json({
       prompt,

@@ -1,4 +1,3 @@
-// app/api/images/route.ts (or route.js)
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -8,35 +7,25 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-type SlimImage = {
-  title: string | null;
-  aiTitle: string | null;
-  alt: string | null;
-};
+const pick = (obj: any, kCamel: string, kSnake: string) =>
+  obj?.[kCamel] ?? obj?.[kSnake] ?? null;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const skip = parseInt(url.searchParams.get("skip") || "0", 10);
-  const limit = parseInt(url.searchParams.get("limit") || "10", 10000);
-  const folder = url.searchParams.get("folder") || "utopias"; // folder is a string
-
-  console.log("searches folder", folder);
-
-  // helper to pull from camelCase or snake_case
-  const pick = (obj: any, kCamel: string, kSnake: string) =>
-    obj?.[kCamel] ?? obj?.[kSnake] ?? null;
+  const limit = parseInt(url.searchParams.get("limit") || "10", 10);
+  const folder = url.searchParams.get("folder") || "utopias";
 
   try {
     const res = await cloudinary.search
       .expression(`folder="${folder}"`)
-      .sort_by("created_at", "asc")
+      .sort_by("created_at", "desc")
       .with_field("context")
       .with_field("metadata")
-      .with_field("tags")
       .max_results(skip + limit)
       .execute();
 
-    const items: SlimImage[] = (res.resources || [])
+    const items = (res.resources || [])
       .slice(skip, skip + limit)
       .map((r: any) => {
         const cx = r.context?.custom ?? r.context ?? {};
@@ -54,12 +43,15 @@ export async function GET(request: Request) {
         const alt =
           pick(cx, "alt", "alt") ?? pick(md, "description", "description");
 
+        // Construct a fresh object—no spreading—so only these keys are returned.
         return { title, aiTitle, alt };
       });
 
-    return NextResponse.json(items);
-  } catch (error) {
-    console.error("Cloudinary fetch error:", error);
+    return NextResponse.json(items, {
+      headers: { "content-type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Cloudinary fetch error:", err);
     return NextResponse.json(
       { error: "Failed to fetch images" },
       { status: 500 }
