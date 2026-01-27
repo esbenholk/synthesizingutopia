@@ -1,1 +1,4 @@
-{}
+{
+  "/api/cloudinary/recent/route": "app/api/cloudinary/recent/route.js",
+  "/api/GetRecentContent/route": "app/api/GetRecentContent/route.js"
+}

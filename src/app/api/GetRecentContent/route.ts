@@ -20,11 +20,14 @@ export async function GET(request: Request) {
 
     const data = await recentImagesResponse.json();
 
+    let newData = { images: null };
+    newData.images = data.items;
+
     if (!recentImagesResponse.ok) {
       throw new Error(data?.error || "Recent fetch failed");
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data.items);
   } catch (error) {
     console.error("Wrapper error:", error);
     return NextResponse.json(
