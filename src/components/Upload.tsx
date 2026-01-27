@@ -21,7 +21,7 @@ export function Upload() {
   const [isFetchingRecent, setIsFetchingRecent] = useState(false);
   const [error, setError] = useState<string>("");
   const [news, setNews] = useState<ImageCardProps[]>([]);
-  const [loadIndex, setLoadIndex] = useState<number>(10);
+  const [loadIndex, setLoadIndex] = useState<number>(0);
   const [remixedPrompt, setRemixedPrompt] = useState("");
 
   // Run fetchRecentImages on component mount
@@ -60,53 +60,25 @@ export function Upload() {
     };
   }, []);
 
+  const [cursor, setCursor] = useState<string | null>(null);
+
   const fetchRecentImages = async () => {
     setIsFetchingRecent(true);
-    // setError(null);
-
     try {
-      const response = await fetch(
-        `/api/cloudinary/recent?skip=${loadIndex}limit=${10}`
-      );
+      const qs = new URLSearchParams({ limit: "10" });
+      if (cursor) qs.set("cursor", cursor);
+
+      const response = await fetch(`/api/cloudinary/recent?${qs.toString()}`);
       const data = await response.json();
-      let _tempNews = news;
+      if (!response.ok) throw new Error(data.error || "Failed to fetch");
 
-      if (data) {
-        console.log("gets data", data);
-
-        for (let index = 0; index < data.length; index++) {
-          const element = data[index];
-
-          const _imageCardProp: ImageCardProps = {
-            title: element.title,
-            url: element.url,
-            tags: element.tags,
-            aiCaption: element.aiCaption,
-            description: element.description || "Untitled",
-            aiTitle: element.aiTitle,
-            aiVibe: element.aiVibe,
-            aiPolitics: element.aiPolitics,
-            aiObjects: element.aiObjects,
-            aiStory: element.aiStory,
-            id: element.id,
-            parentIds: element.parentIds,
-          };
-          _tempNews.push(_imageCardProp);
-        }
-
-        setNews(_tempNews);
-        setLoadIndex(loadIndex + 10);
-      } else {
-        setIsFetchingRecent(false);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch recent images"
-      );
+      setNews((prev) => [...prev, ...data.items]);
+      setCursor(data.nextCursor); // null means “no more”
     } finally {
       setIsFetchingRecent(false);
     }
   };
+
   const showSucces = (duration = 1500) => {
     setSucces(true); // Show the div
     setTimeout(() => {
@@ -156,10 +128,10 @@ export function Upload() {
       try {
         const response = await fetch(
           `/api/generateImage?prompt=${encodeURIComponent(
-            text || "utopias"
+            text || "utopias",
           )}&remixed=yes&adjectives=${encodeURIComponent(
-            joinWithComma(words) || ""
-          )}`
+            joinWithComma(words) || "",
+          )}`,
         );
         const data = await response.json();
 
@@ -440,10 +412,10 @@ export function Upload() {
                   loading
                     ? "passive"
                     : generatedImage
-                    ? "active"
-                    : image
-                    ? "active"
-                    : "passive"
+                      ? "active"
+                      : image
+                        ? "active"
+                        : "passive"
                 }
               >
                 {loading ? "loading content" : <>pour into potion</>}

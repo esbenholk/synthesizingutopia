@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 
 export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
   const [parentIds, setParentIds] = useState<string[]>([]);
-
   useEffect(() => {
+    let fragment = data;
+    console.log("fragment", fragment);
+
     if (data.parentIds != null) {
       if (typeof data.parentIds === "string" && data.parentIds !== "") {
         try {
@@ -27,7 +29,7 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
       setParentIds([]);
     }
 
-    if (data.tags.length > 20) {
+    if (data.tags && data.tags.length > 20) {
       data.tags = data.tags.slice(0, 20);
     }
   }, [data]);

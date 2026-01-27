@@ -1,4 +1,4 @@
-// File: D:\SynthesizingUtopias\project\src\app\api\cloudinary\recent\route.ts
+// File: D:\SynthesizingUtopias\utopiaAPI\src\app\api\cloudinary\recent\route.ts
 import * as entry from '../../../../../../src/app/api/cloudinary/recent/route.js'
 import type { NextRequest } from 'next/server.js'
 
