@@ -3,28 +3,33 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const skipNumber = parseInt(url.searchParams.get("skip") as string) || 0;
-    const limitNumber =
-      parseInt(url.searchParams.get("limit") as string) || 10000;
+
+    const limitNumber = parseInt(url.searchParams.get("limit") || "10", 10);
+    const cursor = url.searchParams.get("cursor"); // <- new
+    const folder = url.searchParams.get("folder"); // optional
+
+    const qs = new URLSearchParams();
+    qs.set("limit", String(limitNumber));
+    if (cursor) qs.set("cursor", cursor);
+    if (folder) qs.set("folder", folder);
 
     const recentImagesResponse = await fetch(
-      `${process.env.BASE_URL}/api/cloudinary/recent?limit=${encodeURIComponent(
-        limitNumber
-      )}&skip=${encodeURIComponent(skipNumber)}`
+      `${process.env.BASE_URL}/api/cloudinary/recent?${qs.toString()}`,
+      { cache: "no-store" }, // helpful while debugging
     );
+
     const data = await recentImagesResponse.json();
 
-    console.log("CALLS 100 IMAGES", recentImagesResponse);
-
-    if (!recentImagesResponse.ok)
-      throw new Error(data.error || "Generation failed");
+    if (!recentImagesResponse.ok) {
+      throw new Error(data?.error || "Recent fetch failed");
+    }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Generation error:", error);
+    console.error("Wrapper error:", error);
     return NextResponse.json(
-      { error: "Failed to generate content" },
-      { status: 500 }
+      { error: "Failed to fetch content" },
+      { status: 500 },
     );
   }
 }
