@@ -10,16 +10,48 @@ cloudinary.config({
 const pick = (obj: any, kCamel: string, kSnake: string) =>
   obj?.[kCamel] ?? obj?.[kSnake] ?? null;
 
+function escapeCloudinaryValue(v: string) {
+  return v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function parseSearchToTags(raw: string | null) {
+  if (!raw) return [];
+  return raw
+    .split(/[,\s]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
+
   const limit = parseInt(url.searchParams.get("limit") || "10", 10);
   const folder = url.searchParams.get("folder") || "utopias";
   const cursor = url.searchParams.get("cursor") || undefined;
 
+  // NEW: sort order
+  const sortParam = (url.searchParams.get("sort") || "asc").toLowerCase();
+  const sortOrder = sortParam === "desc" ? "desc" : "asc"; // enforce valid values
+
+  // NEW: tag search
+  const searchRaw = url.searchParams.get("search");
+  const tags = parseSearchToTags(searchRaw);
+
   try {
+    const folderExpr = `folder="${escapeCloudinaryValue(folder)}"`;
+
+    const tagsExpr =
+      tags.length > 0
+        ? ` AND (${tags
+            .map((t) => `tags="${escapeCloudinaryValue(t)}"`)
+            .join(" OR ")})`
+        : "";
+
+    const expression = `${folderExpr}${tagsExpr}`;
+
     let q = cloudinary.search
-      .expression(`folder="${folder}"`)
-      .sort_by("created_at", "asc")
+      .expression(expression)
+      .sort_by("created_at", sortOrder) // ✅ dynamic sort order
       .with_field("context")
       .with_field("metadata")
       .with_field("tags")
@@ -60,6 +92,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       items,
       nextCursor: res.next_cursor ?? null,
+      sortOrder,
+      // expression, // uncomment for debugging
     });
   } catch (error) {
     console.error("Cloudinary fetch error:", error);

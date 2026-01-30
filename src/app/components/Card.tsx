@@ -3,21 +3,18 @@
 import { ImageCardProps } from "@/components/imageCardProps";
 import { useEffect, useState } from "react";
 
-export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
+export const Card: React.FC<{
+  data: ImageCardProps;
+  onTagClick?: (tag: string) => void;
+}> = ({ data, onTagClick }) => {
   const [parentIds, setParentIds] = useState<string[]>([]);
-  useEffect(() => {
-    let fragment = data;
-    console.log("fragment", fragment);
 
+  useEffect(() => {
     if (data.parentIds != null) {
       if (typeof data.parentIds === "string" && data.parentIds !== "") {
         try {
           const parsed = JSON.parse(data.parentIds);
-          if (Array.isArray(parsed)) {
-            setParentIds(parsed);
-          }
-
-          console.log("has url array", parsed);
+          if (Array.isArray(parsed)) setParentIds(parsed);
         } catch (err) {
           setParentIds([]);
           console.error("Invalid parentIds JSON:", err);
@@ -28,38 +25,38 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
     } else {
       setParentIds([]);
     }
-
-    if (data.tags && data.tags.length > 20) {
-      data.tags = data.tags.slice(0, 20);
-    }
   }, [data]);
+
+  // IMPORTANT: don’t mutate props (you were doing data.tags = ...)
+  const tags = Array.isArray(data.tags) ? data.tags.slice(0, 20) : [];
 
   return (
     <>
       <div>
         <img src={data.url} alt={data.description} />
       </div>
+
       <div className="Info">
         {data.aiTitle && <p className="title"> "{data.aiTitle}"</p>}
         {data.aiPolitics && <p className="politics"> {data.aiPolitics}</p>}
-
         {data.aiStory && <p className="story"> "{data.aiStory}"</p>}
 
-        {data.title && parentIds.length == 0 ? (
+        {data.title &&
+        data.title !== "_" &&
+        data.title !== data.aiTitle &&
+        parentIds.length === 0 ? (
           <div className="input">
-            <p>user input:</p>
-            <p>{data.title === "_" ? "original image" : data.title}</p>
+            <p>{data.title}</p>
           </div>
         ) : parentIds.length > 0 ? (
           <div className="input">
-            <p>user input:</p>
             {parentIds.map((element, index) => (
               <img key={index} src={element} />
             ))}
           </div>
         ) : null}
 
-        {data.description && data.description.toLowerCase() != "untitled" && (
+        {data.description && data.description.toLowerCase() !== "untitled" && (
           <div className="description">
             <p>desc*:</p>
             <p>{data.description}</p>
@@ -67,13 +64,18 @@ export const Card: React.FC<{ data: ImageCardProps }> = ({ data }) => {
         )}
 
         <div className="tags">
-          {data.tags &&
-            data.tags.map((tag, index) => (
-              <span key={index}>
-                {tag}
-                {/* {index !== tags.length - 1 && "--"} */}
-              </span>
-            ))}
+          {tags.map((tag, index) => (
+            <button
+              key={`${tag}-${index}`}
+              type="button"
+              className="tagBtn" // add styling in css if you want
+              onClick={() => onTagClick?.(tag)}
+              disabled={!onTagClick}
+              title={`Load tag: ${tag}`}
+            >
+              {tag}
+            </button>
+          ))}
         </div>
       </div>
     </>

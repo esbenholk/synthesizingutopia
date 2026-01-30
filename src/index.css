@@ -425,8 +425,10 @@ input[type="file"] {
 }
 .openCouldronVideo {
   transform: translate(-50%, -50%) rotate(90deg);
-  width: 200%;
-  transition: all 0.1s ease-in-out, all 0.5s ease-in;
+  width: 220%;
+  transition:
+    all 0.1s ease-in-out,
+    all 0.5s ease-in;
 }
 
 @keyframes rotate {
@@ -445,7 +447,7 @@ input[type="file"] {
   width: 100%;
   overflow-y: scroll;
   position: absolute;
-  top: 0%;
+  top: 100px;
   bottom: 0;
   height: 100%;
   transition: all 2s;
@@ -502,7 +504,7 @@ input[type="file"] {
   color: #6508ff;
   background-color: rgba(63, 255, 10, 1);
   width: 600px;
-  max-width: 70%;
+  max-width: 90%;
   text-align: center;
   min-height: 40px;
 }
@@ -519,10 +521,16 @@ select {
   border-radius: 15px;
   background-color: #00ff00;
 }
+.gallerySearch {
+  width: 90%;
+  display: block;
+}
+.sortOrder {
+  display: flex;
+  justify-content: flex-start;
+}
+.gallerySearch button,
 .Card button {
-  position: absolute;
-  top: 0;
-  right: 0;
   margin: 10px;
   height: 30px;
   border-radius: 15px;
@@ -532,6 +540,11 @@ select {
   background-color: rgba(63, 255, 10, 1);
   transition: all 1s;
   width: fit-content;
+}
+.remixButton {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .selected {
@@ -544,7 +557,7 @@ select {
   filter: invert(1);
 }
 .Card:first-of-type {
-  margin-top: 200px;
+  margin-top: 50px;
 }
 .Card div:first-of-type {
   position: relative;
@@ -689,13 +702,19 @@ select {
   }
 }
 
-.Info .tags {
+.tags {
   padding-top: 20px;
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
   padding-bottom: 5px;
   justify-content: flex-end !important;
+}
+
+.tags button {
+  display: block;
+  position: relative;
+  margin: 0;
 }
 
 .Info .title {

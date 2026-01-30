@@ -31,7 +31,7 @@ export function Upload() {
   }, []);
 
   const loadContent = async () => {
-    await fetchRecentImages();
+    await fetchRecentImages({ reset: true });
   };
 
   useEffect(() => {
@@ -61,22 +61,68 @@ export function Upload() {
   }, []);
 
   const [cursor, setCursor] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [tagSearch, setTagSearch] = useState<string | null>(null); // e.g. "table"
+  const [hasMore, setHasMore] = useState(true);
 
-  const fetchRecentImages = async () => {
+  const fetchRecentImages = async (opts?: {
+    reset?: boolean;
+    sort?: "asc" | "desc";
+    search?: string | null;
+  }) => {
+    const reset = opts?.reset ?? false;
+    const sort = opts?.sort ?? sortOrder;
+    const search = opts?.search ?? tagSearch;
+
     setIsFetchingRecent(true);
+
     try {
-      const qs = new URLSearchParams({ limit: "10" });
-      if (cursor) qs.set("cursor", cursor);
+      const qs = new URLSearchParams({ limit: "10", sort });
+
+      if (!reset && cursor) qs.set("cursor", cursor);
+      if (search) qs.set("search", search);
 
       const response = await fetch(`/api/cloudinary/recent?${qs.toString()}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to fetch");
 
-      setNews((prev) => [...prev, ...data.items]);
-      setCursor(data.nextCursor); // null means “no more”
+      if (reset) {
+        setNews(data.items);
+      } else {
+        setNews((prev) => [...prev, ...data.items]);
+      }
+
+      setCursor(data.nextCursor);
+      setHasMore(Boolean(data.nextCursor)); // ✅ THIS is the key
     } finally {
       setIsFetchingRecent(false);
     }
+  };
+
+  const resetAndReload = async (
+    nextSort: "asc" | "desc",
+    nextSearch: string | null,
+  ) => {
+    setCursor(null);
+    setNews([]);
+    setHasMore(true); // ✅ reset
+    setSortOrder(nextSort);
+    setTagSearch(nextSearch);
+
+    await fetchRecentImages({
+      reset: true,
+      sort: nextSort,
+      search: nextSearch,
+    });
+  };
+
+  const handleToggleSort = async () => {
+    const next = sortOrder === "asc" ? "desc" : "asc";
+    await resetAndReload(next, tagSearch);
+  };
+
+  const handleTagClick = async (tag: string) => {
+    await resetAndReload(sortOrder, tag);
   };
 
   const showSucces = (duration = 1500) => {
@@ -280,6 +326,28 @@ export function Upload() {
     }
   };
 
+  const TagSearchButton = ({
+    label,
+    tag,
+    onClick,
+    disabled,
+  }: {
+    label: string;
+    tag: string;
+    onClick: (tag: string) => void;
+    disabled?: boolean;
+  }) => {
+    return (
+      <button
+        disabled={disabled}
+        onClick={() => onClick(tag)}
+        className="Button"
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
     <div className="brew-container">
       <video
@@ -295,20 +363,69 @@ export function Upload() {
       <div
         className={showGallery ? "GalleryContainer" : "GalleryContainer hidden"}
       >
+        <div className="gallerySearch sortOrder">
+          <button
+            disabled={isFetchingRecent}
+            onClick={handleToggleSort}
+            className="tagBtn"
+          >
+            {isFetchingRecent
+              ? "..."
+              : `Sort: ${sortOrder.toUpperCase() == "ASC" ? "oldest" : "newest"}`}
+          </button>
+        </div>
+        <div className="tags gallerySearch">
+          <TagSearchButton
+            label="we share a meal"
+            tag="table"
+            onClick={handleTagClick}
+            disabled={isFetchingRecent}
+          />
+
+          <TagSearchButton
+            label="we live with nature"
+            tag="nature"
+            onClick={handleTagClick}
+            disabled={isFetchingRecent}
+          />
+
+          <TagSearchButton
+            label="the sun sets"
+            tag="sunset"
+            onClick={handleTagClick}
+            disabled={isFetchingRecent}
+          />
+          <TagSearchButton
+            label="we feel connected"
+            tag="connection"
+            onClick={handleTagClick}
+            disabled={isFetchingRecent}
+          />
+          <TagSearchButton
+            label="the broccoli rules"
+            tag="broccoli"
+            onClick={handleTagClick}
+            disabled={isFetchingRecent}
+          />
+        </div>
+
         <Gallery
           news={news}
           poorRemixedImageIntoCouldron={poorImageIntoCouldron}
           shareImageToSocket={shareImageToSocket}
+          onTagClick={handleTagClick}
         />
 
         <button
-          disabled={isFetchingRecent}
-          onClick={() => {
-            fetchRecentImages();
-          }}
+          disabled={isFetchingRecent || !hasMore}
+          onClick={() => fetchRecentImages()}
           className="Button Loadmore"
         >
-          {isFetchingRecent ? "expanding..." : "load more utopia fragments"}
+          {isFetchingRecent
+            ? "expanding..."
+            : !hasMore
+              ? "no more fragments"
+              : "load more utopia fragments"}
         </button>
       </div>
       <div className="buttons">

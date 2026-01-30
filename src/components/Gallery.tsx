@@ -9,10 +9,12 @@ export default function Gallery({
   news,
   poorRemixedImageIntoCouldron,
   shareImageToSocket,
+  onTagClick,
 }: {
   news: ImageCardProps[];
   poorRemixedImageIntoCouldron: (image: ImageCardProps) => void;
   shareImageToSocket: (image: ImageCardProps) => void;
+  onTagClick?: (tag: string) => void;
 }) {
   const [showRemixer, setShowRemixer] = useState(false);
   const [text, setText] = useState<string>("");
@@ -52,10 +54,10 @@ export default function Gallery({
 
         const response = await fetch(
           `/api/generateImage?prompt=${encodeURIComponent(
-            joinWithComma(prompts) || "utopias"
+            joinWithComma(prompts) || "utopias",
           )}&adjectives=${encodeURIComponent(
-            joinWithComma(tags) || ""
-          )}&remixed=yes`
+            joinWithComma(tags) || "",
+          )}&remixed=yes`,
         );
         const data = await response.json();
 
@@ -195,7 +197,7 @@ export default function Gallery({
     setSelectedImages((prev) =>
       prev.some((img) => img.url === image.url)
         ? prev.filter((img) => img.url !== image.url)
-        : [...prev, image]
+        : [...prev, image],
     );
 
     console.log(selectedImages);
@@ -211,18 +213,18 @@ export default function Gallery({
         <>
           {news.map((image, index) => {
             const isSelected = selectedImages.some(
-              (img) => img.url === image.url
+              (img) => img.url === image.url,
             );
             return (
               <div
                 key={index}
                 className={`Card ${isSelected ? "selected" : ""}`}
               >
-                <Card data={image} />
+                <Card data={image} onTagClick={onTagClick} />
 
                 <button
                   onClick={() => toggleSelection(image)}
-                  className="mt-2 flex items-center gap-1"
+                  className="mt-2 flex items-center gap-1 remixButton"
                 >
                   {!isSelected ? "remix" : "remove from remix"}
                 </button>
@@ -322,8 +324,8 @@ export default function Gallery({
                       loading
                         ? "passive"
                         : generatedImage || collagedImage
-                        ? "active"
-                        : "passive"
+                          ? "active"
+                          : "passive"
                     }
                   >
                     {loading ? "loading content" : <>pour into potion</>}
@@ -364,7 +366,7 @@ interface MosaicOptions {
 
 async function mosaicBlend(
   sources: ImgSource[],
-  opts: MosaicOptions = {}
+  opts: MosaicOptions = {},
 ): Promise<HTMLCanvasElement | string | Blob> {
   const size = opts.size ?? 1024;
   const block = 64 * 2;
@@ -404,7 +406,7 @@ async function mosaicBlend(
       const dy = (size - h) / 2;
       ctx.drawImage(img, dx, dy, w, h);
       return cnv;
-    })
+    }),
   );
 
   // Output canvas
@@ -461,7 +463,7 @@ async function mosaicBlend(
   if (returnType === "dataURL") return out.toDataURL("image/png");
   if (returnType === "blob")
     return await new Promise<Blob>(
-      (res) => out.toBlob((b) => res(b!), "image/png")!
+      (res) => out.toBlob((b) => res(b!), "image/png")!,
     );
   return out;
 }
