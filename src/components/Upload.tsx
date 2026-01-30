@@ -92,6 +92,8 @@ export function Upload() {
         setNews((prev) => [...prev, ...data.items]);
       }
 
+      console.log(data.items);
+
       setCursor(data.nextCursor);
       setHasMore(Boolean(data.nextCursor)); // ✅ THIS is the key
     } finally {

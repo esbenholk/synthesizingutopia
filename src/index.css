@@ -431,6 +431,11 @@ input[type="file"] {
     all 0.5s ease-in;
 }
 
+.input img {
+  max-width: 90% !important;
+  height: 100px;
+}
+
 @keyframes rotate {
   from {
     transform: translate(-50%, -50%) rotate(0deg);
@@ -447,7 +452,8 @@ input[type="file"] {
   width: 100%;
   overflow-y: scroll;
   position: absolute;
-  top: 100px;
+  top: 0;
+  padding-top: 100px;
   bottom: 0;
   height: 100%;
   transition: all 2s;
@@ -524,6 +530,7 @@ select {
 .gallerySearch {
   width: 90%;
   display: block;
+  max-width: 600px;
 }
 .sortOrder {
   display: flex;
@@ -541,7 +548,7 @@ select {
   transition: all 1s;
   width: fit-content;
 }
-.remixButton {
+.cardRemixButton {
   position: absolute;
   top: 0;
   right: 0;
@@ -591,9 +598,7 @@ select {
   color: #00ff00;
   margin: 0;
 }
-.Input img {
-  max-width: 40%;
-}
+
 /* .Info span {
   text-transform: uppercase;
   color: red;

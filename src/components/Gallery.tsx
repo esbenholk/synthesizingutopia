@@ -224,7 +224,7 @@ export default function Gallery({
 
                 <button
                   onClick={() => toggleSelection(image)}
-                  className="mt-2 flex items-center gap-1 remixButton"
+                  className="mt-2 flex items-center gap-1 cardRemixButton"
                 >
                   {!isSelected ? "remix" : "remove from remix"}
                 </button>

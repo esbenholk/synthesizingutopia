@@ -14,10 +14,11 @@ function escapeCloudinaryValue(v: string) {
   return v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+// ✅ Split ONLY on commas so multi-word tags (e.g. "cute dog") stay intact.
 function parseSearchToTags(raw: string | null) {
   if (!raw) return [];
   return raw
-    .split(/[,\s]+/g)
+    .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -29,11 +30,9 @@ export async function GET(request: Request) {
   const folder = url.searchParams.get("folder") || "utopias";
   const cursor = url.searchParams.get("cursor") || undefined;
 
-  // NEW: sort order
   const sortParam = (url.searchParams.get("sort") || "asc").toLowerCase();
-  const sortOrder = sortParam === "desc" ? "desc" : "asc"; // enforce valid values
+  const sortOrder = sortParam === "desc" ? "desc" : "asc";
 
-  // NEW: tag search
   const searchRaw = url.searchParams.get("search");
   const tags = parseSearchToTags(searchRaw);
 
@@ -51,7 +50,7 @@ export async function GET(request: Request) {
 
     let q = cloudinary.search
       .expression(expression)
-      .sort_by("created_at", sortOrder) // ✅ dynamic sort order
+      .sort_by("created_at", sortOrder)
       .with_field("context")
       .with_field("metadata")
       .with_field("tags")
@@ -62,6 +61,7 @@ export async function GET(request: Request) {
     const res = await q.execute();
 
     const items = (res.resources || []).map((r: any) => {
+      // Cloudinary can return context as either object or { custom: ... }
       const cx = r.context?.custom ?? r.context ?? {};
       const md = r.metadata ?? {};
 
@@ -77,6 +77,15 @@ export async function GET(request: Request) {
       const alt =
         pick(cx, "alt", "alt") ?? pick(md, "description", "description");
 
+      // ✅ NEW fields from context
+      const parentIds = pick(cx, "parentIds", "parentIds"); // stringified JSON in your example
+      const aiStory =
+        pick(cx, "aiStory", "ai_extended_story") ??
+        pick(cx, "ai_extended_story", "ai_extended_story");
+      const aiPolitics =
+        pick(cx, "aiPolitics", "ai_political_state") ??
+        pick(cx, "ai_political_state", "ai_political_state");
+
       return {
         id: r.asset_id ?? r.public_id,
         public_id: r.public_id,
@@ -86,6 +95,11 @@ export async function GET(request: Request) {
         title,
         aiTitle,
         alt,
+
+        // ✅ include these in client payload
+        parentIds,
+        aiStory, // corresponds to ai_extended_story
+        aiPolitics, // corresponds to ai_political_state
       };
     });
 
@@ -93,7 +107,6 @@ export async function GET(request: Request) {
       items,
       nextCursor: res.next_cursor ?? null,
       sortOrder,
-      // expression, // uncomment for debugging
     });
   } catch (error) {
     console.error("Cloudinary fetch error:", error);
