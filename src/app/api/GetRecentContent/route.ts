@@ -5,8 +5,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
 
     const limitNumber = parseInt(url.searchParams.get("limit") || "10", 10);
-    const cursor = url.searchParams.get("cursor"); // <- new
-    const folder = url.searchParams.get("folder"); // optional
+    const cursor = url.searchParams.get("cursor"); // used
+    const folder = url.searchParams.get("folder");
 
     const qs = new URLSearchParams();
     qs.set("limit", String(limitNumber));
@@ -15,19 +15,20 @@ export async function GET(request: Request) {
 
     const recentImagesResponse = await fetch(
       `${process.env.BASE_URL}/api/cloudinary/recent?${qs.toString()}`,
-      { cache: "no-store" }, // helpful while debugging
+      { cache: "no-store" },
     );
 
     const data = await recentImagesResponse.json();
-
-    let newData = { images: null };
-    newData.images = data.items;
 
     if (!recentImagesResponse.ok) {
       throw new Error(data?.error || "Recent fetch failed");
     }
 
-    return NextResponse.json(data.items);
+    // IMPORTANT: include next cursor
+    return NextResponse.json({
+      items: data.items ?? [],
+      nextCursor: data.next_cursor ?? data.nextCursor ?? null,
+    });
   } catch (error) {
     console.error("Wrapper error:", error);
     return NextResponse.json(

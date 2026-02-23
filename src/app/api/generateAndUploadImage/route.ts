@@ -27,6 +27,22 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+async function urlToDataUrl(imageUrl: string) {
+  const res = await fetch(imageUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch image (${res.status}) from ${imageUrl}`);
+  }
+
+  const contentType = res.headers.get("content-type") || "image/png";
+  if (!contentType.startsWith("image/")) {
+    throw new Error(`URL did not return an image. content-type=${contentType}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  return `data:${contentType};base64,${base64}`;
+}
+
 // ---------- route ----------
 export async function POST(request: Request) {
   try {
@@ -42,7 +58,7 @@ export async function POST(request: Request) {
     if (!prompt) {
       return NextResponse.json(
         { error: "Missing required field: prompt" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -79,18 +95,18 @@ export async function POST(request: Request) {
       n: 1,
       // quality: "standard", // optional
       // style: "vivid",      // optional
-      // response_format: "b64_json" // default when using b64 access below
+      response_format: "b64_json", // default when using b64 access below
     });
 
     const b64 = imageGen.data?.[0]?.b64_json;
+    if (!b64) throw new Error("No b64_json returned from image generation");
+    const dataUrl = `data:image/png;base64,${b64}`;
     const remoteUrl = imageGen.data?.[0]?.url;
-
-    console.log("has image:" + remoteUrl);
 
     if (!b64 && !remoteUrl) {
       return NextResponse.json(
         { error: "Image generation returned no data" },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -98,6 +114,8 @@ export async function POST(request: Request) {
     const uploadSource = b64
       ? `data:image/png;base64,${b64}`
       : (remoteUrl as string);
+
+    console.log("check image format", b64);
 
     // 3) Upload to Cloudinary (with your moderation settings)
     const uploadResult = await cloudinary.uploader.upload(uploadSource, {
@@ -133,7 +151,7 @@ export async function POST(request: Request) {
       | undefined;
 
     const wasRejected = moderationArr?.some(
-      (m) => m.status === "rejected" && m.kind?.startsWith("aws_rek")
+      (m) => m.status === "rejected" && m.kind?.startsWith("aws_rek"),
     );
 
     console.log("checks for decency" + wasRejected + moderationArr);
@@ -141,11 +159,17 @@ export async function POST(request: Request) {
     if (wasRejected) {
       return NextResponse.json(
         { error: "image does not adhere to our policy" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log("image was not rejected:" + !wasRejected);
+    const visionImageUrl =
+      dataUrl ?? (await urlToDataUrl(uploadResult.secure_url));
+    console.log(
+      "image was not rejected:" + !wasRejected,
+      "secure url",
+      uploadResult.secure_url,
+    );
 
     // 5) Vision pass to extract metadata (same prompt you used)
     const visionPrompt = `
@@ -172,14 +196,22 @@ Rules:
           role: "user",
           content: [
             { type: "text", text: visionPrompt },
-            { type: "image_url", image_url: { url: uploadResult.secure_url } },
+            { type: "image_url", image_url: { url: uploadSource } },
           ],
         },
       ];
 
     const vision = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: visionMessages,
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: visionPrompt },
+            { type: "image_url", image_url: { url: uploadResult.secure_url } },
+          ],
+        },
+      ],
       temperature: 0.3,
       response_format: { type: "json_object" },
       max_tokens: 800,
@@ -271,7 +303,7 @@ Rules:
     console.error("Generate+Upload error:", error);
     return NextResponse.json(
       { error: "Failed to generate and upload image" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

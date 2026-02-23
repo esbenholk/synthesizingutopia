@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const { imageUrl, title, tags, parentIds } = await request.json();
     // Upload image to Cloudinary
-    console.log("IMAGE UPLOAD", title, tags, parentIds);
+    console.log("IMAGE UPLOAD", title, tags, parentIds, imageUrl);
 
     const result = await cloudinary.uploader.upload(imageUrl, {
       folder: "utopias",
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       | undefined;
 
     const wasRejected = moderationArr?.some(
-      (m) => m.status === "rejected" && m.kind.startsWith("aws_rek")
+      (m) => m.status === "rejected" && m.kind.startsWith("aws_rek"),
     );
 
     if (!wasRejected) {
@@ -178,14 +178,14 @@ export async function POST(request: Request) {
       console.error("explicit image");
       return NextResponse.json(
         { error: "image does not adhere to our policy" },
-        { status: 500 }
+        { status: 500 },
       );
     }
   } catch (error) {
     console.error("Cloudinary upload error:", error);
     return NextResponse.json(
       { error: "Failed to upload image" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
