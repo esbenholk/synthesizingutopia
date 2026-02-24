@@ -250,10 +250,10 @@ export function Upload({ folder = "utopias" }: { folder?: string }) {
           if (z) zoneCounts.set(z, (zoneCounts.get(z) ?? 0) + 1);
           if (l) intimacyCounts.set(l, (intimacyCounts.get(l) ?? 0) + 1);
         }
-        const topZone = [...zoneCounts.entries()].sort(
+        const topZone = Array.from(zoneCounts.entries()).sort(
           (a, b) => b[1] - a[1],
         )[0]?.[0];
-        const topIntimacy = [...intimacyCounts.entries()].sort(
+        const topIntimacy = Array.from(intimacyCounts.entries()).sort(
           (a, b) => b[1] - a[1],
         )[0]?.[0];
         if (topZone) setAiSuggestedZone(topZone as ZoneId);
