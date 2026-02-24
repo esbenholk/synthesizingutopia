@@ -36,6 +36,8 @@ export async function GET(request: Request) {
     const sentence = completion.choices[0].message.content || "";
     sentence.replace('"', "");
 
+    console.log("has prompt", sentence);
+
     let styleSuffix =
       "the image should be in the style of mideaval drawings, fantasy, post-internet graphics and sci-fi. the image is not allowed to show any caption or UI element.";
 
@@ -47,6 +49,11 @@ export async function GET(request: Request) {
       n: 1,
       size: "1024x1024",
     });
+
+    console.log(
+      "has image",
+      image.data ? image.data[0].url : "imageurlplaceholder",
+    );
 
     const data = {
       prompt,
@@ -62,7 +69,7 @@ export async function GET(request: Request) {
     console.error("Generation error:", error);
     return NextResponse.json(
       { error: "Failed to generate content" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

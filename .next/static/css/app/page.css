@@ -160,7 +160,7 @@ input[type="file"] {
   display: block;
   position: relative;
   min-width: 45%;
-  padding: 10px;
+  /* padding: 10px; */
   border-radius: 25px;
   background-color: #6508ff;
   color: rgba(63, 255, 10, 1);
@@ -170,7 +170,7 @@ input[type="file"] {
   transition: all 1s;
   text-wrap: nowrap;
 }
-.uploaderButtons button:last-of-type {
+.uploaderButtons:last-of-type button {
   width: 100%;
   margin-top: 10px;
 }
@@ -195,25 +195,30 @@ input[type="file"] {
 }
 .imageResult {
   flex: 0 0 auto; /* Let it size naturally */
-  max-height: 200px; /* Or whatever the image height is */
+  /* max-height: 200px; Or whatever the image height is */
   display: flex;
   flex-direction: row;
   justify-content: center;
+}
+
+.loaderGif {
+  width: 200px;
+  height: 200px;
 }
 .imageResult div {
   width: fit-content;
 }
 .imageResult img {
-  /* width: 100%; */
+  width: 100%;
   max-height: 200px;
   object-fit: contain;
 }
 .closebtn {
   position: absolute;
-  top: -15px;
-  right: -15px;
-  width: 30px;
-  height: 30px;
+  top: 5px;
+  right: 5px;
+  width: 15px;
+  height: 15px;
   background-color: #6508ff;
   color: rgba(63, 255, 10, 1);
   display: flex;
@@ -230,6 +235,8 @@ input[type="file"] {
   overflow-y: auto; /* Scroll if content is too large */
   width: 100%;
   position: relative;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
 }
 
 .wordinputs textarea,
@@ -461,6 +468,18 @@ input[type="file"] {
   height: 100%;
   transition: all 2s;
   opacity: 1;
+}
+
+/* Diagram mode — override flex/scroll, go fullscreen fixed */
+.GalleryContainer.diagram-mode {
+  display: block;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  z-index: 100;
 }
 .selectedImages {
   max-width: 100%;
@@ -759,5 +778,743 @@ select {
 .galleryUploaderButtons {
   justify-content: center;
   gap: 5px;
+}
+
+/* ── DiagramGallery ────────────────────────────────────────────────────────── */
+
+/* Fills the diagram-center column */
+.diagram-fullscreen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* background: #000; */
+}
+
+.diagram-svg-fixed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Controls bar — floats above the SVG */
+.diagram-controls {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.diagram-close-btn {
+  margin-left: auto;
+}
+
+.diagram-ctrl-hint {
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 255, 0, 0.22);
+}
+
+/* Unassigned strip — floats at bottom */
+.diagram-unassigned {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 110;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.diagram-unassigned-label {
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(0, 255, 0, 0.28);
+  margin-bottom: 6px;
+}
+
+.diagram-unassigned-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.diagram-unassigned-thumb {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  opacity: 0.45;
+  border: 1px solid rgba(0, 255, 0, 0.15);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.diagram-unassigned-thumb:hover {
+  opacity: 1;
+}
+
+/* Detail overlay */
+.diagram-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.diagram-detail-card {
+  background: rgb(0, 255, 0);
+  border: 1px solid rgb(0, 255, 0);
+  max-width: 420px;
+  width: 90vw;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 16px;
+  position: relative;
+}
+
+.diagram-detail-card img {
+  width: 100%;
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* zone/intimacy pickers */
+.diagram-pickers {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 10px;
+}
+
+.diagram-picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.diagram-picker-label {
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ai-suggestion {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ai-suggest-btn {
+  color: #00ff00;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.diagram-picker-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.diagram-pick-btn {
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.diagram-pick-btn:hover {
+  background-color: #00ff00;
+  color: #6508ff;
+}
+
+.diagram-pick-btn.selected {
+  background-color: #00ff00;
+  color: #6508ff;
+}
+
+.diagram-pick-btn.ai-suggested {
+  border-color: #6508ff;
+  background: rgba(101, 8, 255, 0.15);
+  box-shadow: 0 0 0 1px #6508ff;
+}
+
+.diagram-pick-btn.ai-suggested::after {
+  content: " ✦";
+  font-size: 8px;
+  opacity: 0.8;
+}
+
+/* flash red border when user tries to submit without picking zone/intimacy */
+.picker-error {
+  animation: picker-flash 0.2s ease-in-out 4;
+}
+
+@keyframes picker-flash {
+  0%,
+  100% {
+    outline: none;
+  }
+  50% {
+    outline: 2px solid #ff0000;
+  }
+}
+
+/* ── 3-column diagram layout ────────────────────────────────────────────────── */
+
+.mainContainer {
+  height: 100vh;
+  overflow: hidden;
+  background: #6508ff;
+  font-family: "Courier New", monospace;
+}
+
+.panel-title {
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 255, 0, 0.45);
+  margin: 0 0 14px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 255, 0, 0.15);
+}
+
+/* shared panel base */
+.diagram-uploader,
+.diagram-remixer {
+  position: relative;
+  padding: 16px;
+  box-sizing: border-box;
+  /* background: #0a0a0a; */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.diagram-detail-card::-webkit-scrollbar,
+.diagram-uploader::-webkit-scrollbar,
+.diagram-remixer::-webkit-scrollbar {
+  width: 4px;
+}
+.diagram-detail-card::-webkit-scrollbar-thumb,
+.diagram-uploader::-webkit-scrollbar-thumb,
+.diagram-remixer::-webkit-scrollbar-thumb {
+  background: #00ff00;
+  border-radius: 4px;
+}
+
+/* center column holds the diagram */
+.diagram-center {
+  position: relative;
+  overflow: hidden;
+  /* background: #000; */
+}
+
+/* desktop: 3-column grid */
+@media (min-width: 769px) {
+  .mainContainer {
+    display: grid;
+    grid-template-columns:
+      minmax(240px, 360px)
+      1fr
+      minmax(240px, 360px);
+    gap: 0;
+  }
+
+  .diagram-uploader,
+  .diagram-remixer {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+  }
+
+  .diagram-uploader {
+    border-right: 1px solid #00ff00;
+  }
+  .diagram-remixer {
+    border-left: 1px solid #00ff00;
+  }
+
+  .diagram-center {
+    height: 100vh;
+  }
+}
+
+/* mobile: horizontal swipe panels */
+/* mobile: 3-page horizontal swipe */
+@media (max-width: 768px) {
+  .mainContainer {
+    display: flex;
+    flex-direction: row;
+    width: 100vw;
+    height: 100dvh;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* every direct child = one full-screen page */
+  .mainContainer > * {
+    flex: 0 0 100vw;
+    width: 100vw;
+    height: 100dvh;
+    scroll-snap-align: start;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+
+  /* diagram center must NOT scroll vertically */
+  .diagram-center {
+    overflow-y: hidden !important;
+  }
+}
+
+/* mobile nav hints — hidden on desktop */
+.mobile-nav-hint {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-nav-hint {
+    display: flex;
+    gap: 8px;
+    padding: 12px 0 4px;
+    justify-content: flex-end;
+  }
+
+  .diagram-mobile-nav {
+    position: absolute;
+    bottom: 16px;
+    left: 0;
+    right: 0;
+    padding: 0 16px;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 120;
+  }
+
+  .diagram-mobile-nav .mobile-nav-btn {
+    pointer-events: auto;
+  }
+}
+
+.mobile-nav-btn {
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  background-color: #6508ff;
+  border: 1px solid rgb(0, 255, 0);
+  color: rgba(0, 255, 0, 0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mobile-nav-btn:hover,
+.mobile-nav-btn:active {
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+/* ── diagram-mode uploader form fields ───────────────────────────────────────── */
+.diagram-remixer p,
+.diagram-uploader p {
+  color: #00ff00;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.diagram-uploader textarea,
+.diagram-uploader input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  background: #6508ff;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 8px;
+  border-radius: 0;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.diagram-uploader textarea:focus,
+.diagram-uploader input[type="text"]:focus {
+  border-color: rgba(0, 255, 0, 0.6);
+}
+
+.diagram-uploader .textinputs,
+.diagram-uploader .wordinputs {
+  margin-bottom: 12px;
+  position: static;
+  overflow: visible;
+}
+
+.diagram-uploader .adjButtons {
+  position: static;
+  margin-top: 6px;
+}
+
+.diagram-uploader .imageResultContainer {
+  margin-bottom: 12px;
+}
+
+.diagram-uploader .imageResult {
+  width: 100%;
+  aspect-ratio: 1/1;
+  max-height: 100%;
+  background: #00ff00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.diagram-uploader .imageResult img {
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - 20px);
+  object-fit: contain;
+}
+
+.diagram-uploader .uploaderButtons {
+  height: auto;
+  margin-bottom: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* super-default button style (from reference) */
+.super-default {
+  display: inline-block;
+  padding: 5px 10px;
+  color: #00ff00;
+  background: #6508ff;
+  border: 1px solid rgba(0, 255, 0, 0.35);
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.super-default:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.super-default.active {
+  border-color: #00ff00;
+
+  border-color: #00ff00;
+}
+
+.super-default:hover {
+  background: #00ff00;
+  color: #6508ff;
+  border-color: #00ff00;
+}
+.super-default.passive {
+  opacity: 0.35;
+}
+
+.right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* adjBtn in diagram context */
+.diagram-uploader .adjBtn,
+.diagram-remixer .adjBtn {
+  padding: 3px 8px;
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  background: transparent;
+  color: rgba(0, 255, 0, 0.6);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.12s;
+}
+.diagram-uploader .adjBtn:hover,
+.diagram-remixer .adjBtn:hover {
+  background: rgba(0, 255, 0, 0.08);
+  color: #00ff00;
+}
+
+/* remixer panel */
+.diagram-remixer .imageResultContainer {
+  margin-bottom: 12px;
+}
+.diagram-remixer .imageResult {
+  width: 100%;
+  aspect-ratio: 1/1;
+
+  background: rgba(0, 255, 0, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  color: #6508ff;
+}
+.diagram-remixer .imageResult img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.diagram-remixer .uploaderButtons {
+  height: auto;
+  margin-bottom: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.remix-placeholder {
+  color: rgba(0, 255, 0, 0.25);
+  font-size: 10px;
+  font-family: "Courier New", monospace;
+  text-align: center;
+  padding: 16px;
+  letter-spacing: 0.06em;
+}
+
+/* success flash in diagram layout */
+.diagram-uploader .succes {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 255, 0, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.diagram-uploader .succes p,
+.diagram-uploader .error p {
+  color: #000;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.diagram-uploader .error {
+  background: rgba(255, 0, 0, 0.8);
+  cursor: pointer;
+}
+
+/* loaderAnim in column context */
+.diagram-uploader .loaderAnim,
+.diagram-remixer .loaderAnim {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  aspect-ratio: 1;
+  --c: no-repeat linear-gradient(rgba(0, 255, 0, 1) 0 0);
+  background:
+    var(--c) 0% 50%,
+    var(--c) 50% 50%,
+    var(--c) 100% 50%;
+  background-size: 20% 100%;
+  animation: l1 1s infinite linear;
+}
+
+/* ── panel uploading overlay ─────────────────────────────────────────────── */
+.panel-uploading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 100%;
+  height: max-content;
+  background: rgb(9, 255, 0);
+  z-index: 200;
+  pointer-events: none;
+}
+
+/* ── remix selected grid ─────────────────────────────────────────────────── */
+.remix-selected-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.remix-selected-thumb {
+  position: relative;
+  width: var(--thumb-size, 56px);
+  height: var(--thumb-size, 56px);
+  flex: 0 0 var(--thumb-size, 56px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.remix-selected-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.remix-thumb-remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  background: #6508ff;
+  border: 1px solid #00ff00;
+  border-radius: 50%;
+  font-size: 9px;
+  color: #00ff00;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── responsive utility classes ─────────────────────────────────────────── */
+.mobile-only {
+  display: none;
+}
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block;
+  }
+  .desktop-only {
+    display: none;
+  }
+}
+
+/* ── remixer collapse ────────────────────────────────────────────────────── */
+.remixer-collapse-btn {
+  display: none; /* mobile: hidden, handled by swipe */
+}
+
+@media (min-width: 769px) {
+  .remixer-collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    left: -14px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 48px;
+    background: #6508ff;
+    border: 1px solid #00ff00;
+    border-radius: 4px 0 0 4px;
+    color: #00ff00;
+    font-family: "Courier New", monospace;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    writing-mode: vertical-rl;
+    padding: 4px 2px;
+    z-index: 10;
+    transition: background 0.15s;
+  }
+  .remixer-collapse-btn:hover {
+    background: #00ff00;
+    color: #6508ff;
+  }
+
+  /* collapsed state: shrink to a thin strip */
+  .mainContainer:has(.remixer-collapsed) {
+    grid-template-columns:
+      minmax(240px, 360px)
+      1fr
+      28px;
+  }
+
+  .remixer-collapsed {
+    overflow: visible !important;
+    padding: 0 !important;
+    border-left: 1px solid #00ff00;
+    min-width: 28px;
+    width: 28px;
+  }
+
+  .remixer-collapsed .remixer-collapse-btn {
+    left: 0;
+    border-radius: 0;
+    width: 28px;
+    writing-mode: vertical-rl;
+  }
+}
+
+/* ── description in detail card ─────────────────────────────────────────── */
+.diagram-detail-card .description {
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  color: #00ff00;
+  margin: 8px 0 4px;
+  font-style: italic;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+/* ── passive buttons truly unclickable ───────────────────────────────────── */
+.passive,
+button:disabled,
+button[disabled] {
+  pointer-events: none !important;
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 

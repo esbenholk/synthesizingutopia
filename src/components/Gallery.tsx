@@ -274,7 +274,10 @@ export default function Gallery({
                 <div className="imageResult">
                   {loading ? (
                     <>
-                      <img src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742059296/brewing_ruxhpm.gif" />
+                      <img
+                        className="loaderGif"
+                        src="https://res.cloudinary.com/dmwpm8iiw/image/upload/v1742059296/brewing_ruxhpm.gif"
+                      />
                     </>
                   ) : generatedImage ? (
                     <div>

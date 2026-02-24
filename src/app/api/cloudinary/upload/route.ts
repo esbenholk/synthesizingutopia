@@ -28,12 +28,12 @@ cloudinary.config({
 
 export async function POST(request: Request) {
   try {
-    const { imageUrl, title, tags, parentIds } = await request.json();
+    const { imageUrl, title, tags, parentIds, folder = "utopias", zoneHint, intimacyHint } = await request.json();
     // Upload image to Cloudinary
     console.log("IMAGE UPLOAD", title, tags, parentIds, imageUrl);
 
     const result = await cloudinary.uploader.upload(imageUrl, {
-      folder: "utopias",
+      folder: folder,
       context: {
         alt: title,
         caption: title,
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         You will be given an image of a "Utopia" and the intended title: "${title}".
 
         Return ONLY minified JSON with these keys:
-        {"title":"","caption":"","altText":"","extended_story":"","political_state":"","tags":[],"vibe":[],"objects":[],"scenes":[]}
+        {"title":"","caption":"","altText":"","extended_story":"","political_state":"","tags":[],"vibe":[],"objects":[],"scenes":[],"zoneofinterest":"","intimacylevel":""}
 
         Rules:
         - "title": ≤ 7 words, aligned with "${title}" (refine if needed).
@@ -85,6 +85,8 @@ export async function POST(request: Request) {
         - "vibe": up to 3 mood words.
         - "objects": up to 8 concrete things visible.
         - "scenes": up to 4 scene/place words.
+        - "zoneofinterest": ${zoneHint ? `user chose "${zoneHint}", use exactly that` : `pick exactly ONE of: zoneofinterest1 (Ecology), zoneofinterest2 (Governance), zoneofinterest3 (Economy), zoneofinterest4 (Infrastructure), zoneofinterest5 (Culture), zoneofinterest6 (Social), zoneofinterest7 (Technology) — whichever best fits the image`}.
+        - "intimacylevel": ${intimacyHint ? `user chose "${intimacyHint}", use exactly that` : `pick exactly ONE of: intimacylevel1 (Personal/Intimate), intimacylevel2 (Social/Communal), intimacylevel3 (Global/Civilisational) — based on the scale of the depicted scene`}.
         - No extra text; JSON only.`;
 
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -128,6 +130,9 @@ export async function POST(request: Request) {
         vibe: Array.isArray(ai?.vibe) ? ai.vibe.map(String) : [],
         objects: Array.isArray(ai?.objects) ? ai.objects.map(String) : [],
         scenes: Array.isArray(ai?.scenes) ? ai.scenes.map(String) : [],
+        // ✦ USER HINT TAKES PRECEDENCE over AI suggestion for zone/intimacy
+        zoneofinterest: String(zoneHint ?? ai?.zoneofinterest ?? "").trim().toLowerCase(),
+        intimacylevel: String(intimacyHint ?? ai?.intimacylevel ?? "").trim().toLowerCase(),
       };
 
       const mergedTags = dedupLower([
@@ -135,7 +140,9 @@ export async function POST(request: Request) {
         ...payload.vibe,
         ...payload.objects,
         ...payload.scenes,
-      ]).slice(0, 25); // keep it tidy
+        ...(payload.zoneofinterest ? [payload.zoneofinterest] : []),
+        ...(payload.intimacylevel ? [payload.intimacylevel] : []),
+      ]).slice(0, 27); // bumped to 27 to fit zone + intimacy
 
       let mergedTagsString = mergedTags.join(",");
 
@@ -157,6 +164,8 @@ export async function POST(request: Request) {
           ai_scenes: (payload.scenes || []).join(", "),
           ai_extended_story: payload.extended_story,
           parentIds: parentIds != null ? parentIds : "",
+          zone_of_interest: payload.zoneofinterest,
+          intimacy_level: payload.intimacylevel,
         },
       });
 
