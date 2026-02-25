@@ -80,7 +80,14 @@ export function Upload({ folder = "utopias" }: { folder?: string }) {
 
   useEffect(() => {
     loadContent();
-  }, []);
+  }, [folder]); // ← re-fetch when folder changes
+
+  useEffect(() => {
+    setNews([]);
+    setCursor(null);
+    setHasMore(true);
+    fetchRecentImages({ reset: true });
+  }, [folder]);
 
   const loadContent = async () => {
     await fetchRecentImages({ reset: true });

@@ -16,6 +16,12 @@
       "static/chunks/main-app.js",
       "static/css/app/gefion/page.css",
       "static/chunks/app/gefion/page.js"
+    ],
+    "/next/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/next/page.css",
+      "static/chunks/app/next/page.js"
     ]
   }
 }
