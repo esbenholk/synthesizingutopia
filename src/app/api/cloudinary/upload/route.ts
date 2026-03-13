@@ -3,6 +3,8 @@ import { v2 as cloudinary } from "cloudinary";
 
 import OpenAI from "openai";
 
+const CLOUDINARY_CONTEXT_MAX_CHARS = 1000;
+
 function dedupLower(arr: string[]) {
   const seen: Record<string, true> = {};
   const out: string[] = [];
@@ -14,6 +16,42 @@ function dedupLower(arr: string[]) {
     }
   }
   return out;
+}
+
+/**
+ * Splits a long string into chunks that fit within Cloudinary's context value
+ * character limit. Tries to break on sentence boundaries (". ") where possible,
+ * otherwise falls back to hard-cutting at the limit.
+ */
+function chunkText(
+  text: string,
+  maxLen = CLOUDINARY_CONTEXT_MAX_CHARS,
+): string[] {
+  if (text.length <= maxLen) return [text];
+
+  const chunks: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > maxLen) {
+    // Try to find a sentence boundary within the allowed window
+    const window = remaining.slice(0, maxLen);
+    const lastSentence = Math.max(
+      window.lastIndexOf(". "),
+      window.lastIndexOf("! "),
+      window.lastIndexOf("? "),
+    );
+
+    const cutAt =
+      lastSentence > maxLen * 0.5
+        ? lastSentence + 1 // include the punctuation, cut before the space
+        : maxLen; // no good boundary found – hard cut
+
+    chunks.push(remaining.slice(0, cutAt).trim());
+    remaining = remaining.slice(cutAt).trim();
+  }
+
+  if (remaining.length > 0) chunks.push(remaining);
+  return chunks;
 }
 
 const openai = new OpenAI({
@@ -28,15 +66,35 @@ cloudinary.config({
 
 export async function POST(request: Request) {
   try {
-    const { imageUrl, title, tags, parentIds, folder = "utopias", zoneHint, intimacyHint } = await request.json();
+    const {
+      imageUrl,
+      title,
+      tags,
+      parentIds,
+      folder = "utopias",
+      zoneHint,
+      intimacyHint,
+    } = await request.json();
+
+    // Pre-process title: chunk it immediately so every Cloudinary write is safe
+    const titleChunks = chunkText(
+      typeof title === "string" ? title.trim() : "",
+    );
+    const titleFirst = titleChunks[0] ?? "";
+    if (titleChunks.length > 1) {
+      console.log(
+        `Title too long (${title.length} chars) — split into ${titleChunks.length} chunks`,
+      );
+    }
+
     // Upload image to Cloudinary
     console.log("IMAGE UPLOAD", title, tags, parentIds, imageUrl);
 
     const result = await cloudinary.uploader.upload(imageUrl, {
       folder: folder,
       context: {
-        alt: title,
-        caption: title,
+        alt: titleFirst,
+        caption: titleFirst,
         parentIds: parentIds != null ? parentIds.toString() : "",
       },
       moderation:
@@ -131,8 +189,12 @@ export async function POST(request: Request) {
         objects: Array.isArray(ai?.objects) ? ai.objects.map(String) : [],
         scenes: Array.isArray(ai?.scenes) ? ai.scenes.map(String) : [],
         // ✦ USER HINT TAKES PRECEDENCE over AI suggestion for zone/intimacy
-        zoneofinterest: String(zoneHint ?? ai?.zoneofinterest ?? "").trim().toLowerCase(),
-        intimacylevel: String(intimacyHint ?? ai?.intimacylevel ?? "").trim().toLowerCase(),
+        zoneofinterest: String(zoneHint ?? ai?.zoneofinterest ?? "")
+          .trim()
+          .toLowerCase(),
+        intimacylevel: String(intimacyHint ?? ai?.intimacylevel ?? "")
+          .trim()
+          .toLowerCase(),
       };
 
       const mergedTags = dedupLower([
@@ -151,11 +213,18 @@ export async function POST(request: Request) {
       }
       console.log("OPENAI PAYLOAD", payload);
 
+      // Build title context from the already-chunked title (computed at top of POST)
+      const titleContext: Record<string, string> = { caption: titleFirst };
+      for (let i = 1; i < titleChunks.length; i++) {
+        titleContext[`title_continuation_${i}`] = titleChunks[i];
+      }
+
       await cloudinary.uploader.explicit(result.public_id, {
         type: "upload",
         tags: mergedTagsString, // or use add_tag(...) to append
         context: {
-          caption: title,
+          // Title: first chunk goes to `caption`, overflows to title_continuation_N keys
+          ...titleContext,
           alt: payload.altText,
           ai_title: payload.title,
           ai_political_state: payload.political_state,
@@ -182,6 +251,7 @@ export async function POST(request: Request) {
         ai_extended_story: payload.extended_story,
         tags: mergedTags.concat(tags),
         parentIds: parentIds != null && parentIds,
+        title_chunks: titleChunks.length,
       });
     } else {
       console.error("explicit image");

@@ -23,6 +23,31 @@ function parseSearchToTags(raw: string | null) {
     .filter(Boolean);
 }
 
+/**
+ * Reassembles a title that was split across Cloudinary context keys due to
+ * the 1000-char limit.
+ *
+ * Storage layout:
+ *   caption              → first chunk (always present)
+ *   title_continuation_1 → second chunk (only present if title was too long)
+ *   title_continuation_2 → third chunk  … etc.
+ */
+function reassembleTitle(cx: Record<string, string>): string {
+  const first = (cx.caption ?? "").trim();
+  if (!first) return "";
+
+  const continuations: string[] = [];
+  let i = 1;
+  while (cx[`title_continuation_${i}`]) {
+    continuations.push(cx[`title_continuation_${i}`].trim());
+    i++;
+  }
+
+  return continuations.length > 0
+    ? `${first} ${continuations.join(" ")}`.trim()
+    : first;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
@@ -68,17 +93,17 @@ export async function GET(request: Request) {
       const aiTitle =
         pick(cx, "aiTitle", "ai_title") ?? pick(md, "aiTitle", "ai_title");
 
+      // Reassemble title from caption + any title_continuation_N chunks
       const title =
-        pick(cx, "caption", "caption") ??
-        pick(md, "title", "title") ??
-        r.public_id?.split("/").pop() ??
+        reassembleTitle(cx) ||
+        pick(md, "title", "title") ||
+        r.public_id?.split("/").pop() ||
         "Untitled";
 
       const alt =
         pick(cx, "alt", "alt") ?? pick(md, "description", "description");
 
-      // ✅ NEW fields from context
-      const parentIds = pick(cx, "parentIds", "parentIds"); // stringified JSON in your example
+      const parentIds = pick(cx, "parentIds", "parentIds");
       const aiStory =
         pick(cx, "aiStory", "ai_extended_story") ??
         pick(cx, "ai_extended_story", "ai_extended_story");
@@ -95,11 +120,9 @@ export async function GET(request: Request) {
         title,
         aiTitle,
         alt,
-
-        // ✅ include these in client payload
         parentIds,
-        aiStory, // corresponds to ai_extended_story
-        aiPolitics, // corresponds to ai_political_state
+        aiStory,
+        aiPolitics,
       };
     });
 

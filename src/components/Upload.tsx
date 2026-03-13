@@ -25,6 +25,51 @@ function cloudinaryQuality(
   );
 }
 
+/**
+ * Reassembles a title that was split across Cloudinary context keys.
+ *
+ * When a title exceeds 1000 chars it is stored as:
+ *   caption              → first chunk
+ *   title_continuation_1 → second chunk
+ *   title_continuation_2 → third chunk  …etc
+ *
+ * This helper stitches them back into one string.
+ * It also accepts a plain string so callers can always run any title through it.
+ */
+function reassembleTitle(
+  context: Record<string, string> | undefined | null,
+): string {
+  if (!context) return "";
+
+  const first = (context.caption ?? "").trim();
+  if (!first) return "";
+
+  const continuations: string[] = [];
+  let i = 1;
+  while (context[`title_continuation_${i}`]) {
+    continuations.push(context[`title_continuation_${i}`].trim());
+    i++;
+  }
+
+  return continuations.length > 0
+    ? `${first} ${continuations.join(" ")}`.trim()
+    : first;
+}
+
+/**
+ * Normalises a raw item coming from /api/cloudinary/recent so that
+ * ImageCardProps.title always contains the full, reassembled title.
+ */
+function normaliseItem(
+  item: ImageCardProps & { context?: Record<string, string> },
+): ImageCardProps {
+  const fullTitle = reassembleTitle(item.context);
+  return {
+    ...item,
+    title: fullTitle || item.title || "",
+  };
+}
+
 export function Upload({ folder = "utopias" }: { folder?: string }) {
   const [image, setImage] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -140,12 +185,17 @@ export function Upload({ folder = "utopias" }: { folder?: string }) {
       const response = await fetch(`/api/cloudinary/recent?${qs.toString()}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to fetch");
-      if (reset) {
-        setNews(data.items);
 
-        console.log("has images", data.items);
+      // Reassemble any titles that were split across continuation context keys
+      const normalisedItems: ImageCardProps[] = (
+        data.items as (ImageCardProps & { context?: Record<string, string> })[]
+      ).map(normaliseItem);
+
+      if (reset) {
+        setNews(normalisedItems);
+        console.log("has images", normalisedItems);
       } else {
-        setNews((prev) => [...prev, ...data.items]);
+        setNews((prev) => [...prev, ...normalisedItems]);
       }
       setCursor(data.nextCursor);
       setHasMore(Boolean(data.nextCursor));
@@ -391,6 +441,8 @@ export function Upload({ folder = "utopias" }: { folder?: string }) {
           setUploadLoading(false);
           throw new Error(data.error || "Upload failed");
         } else {
+          // The upload API returns the full title in data.title (already
+          // reassembled server-side), so no chunking stitching needed here.
           const _imageCardProp: ImageCardProps = {
             title: data.title,
             url: data.url,
