@@ -52,8 +52,11 @@ export async function POST(request: Request) {
       title = "",
       tags = "",
       parentIds,
-      folder = "utopias",
     } = await request.json();
+
+    const url = new URL(request.url);
+
+    let folder = url.searchParams.get("folder") || "utopias";
 
     if (!prompt) {
       return NextResponse.json(

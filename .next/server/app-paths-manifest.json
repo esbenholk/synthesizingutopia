@@ -1,4 +1,4 @@
 {
-  "/next/page": "app/next/page.js",
-  "/api/cloudinary/recent/route": "app/api/cloudinary/recent/route.js"
+  "/gefion/page": "app/gefion/page.js",
+  "/api/cloudinary/upload/route": "app/api/cloudinary/upload/route.js"
 }

@@ -61,6 +61,8 @@ export async function GET(request: Request) {
   const searchRaw = url.searchParams.get("search");
   const tags = parseSearchToTags(searchRaw);
 
+  console.log("getrecentcontent", folder);
+
   try {
     const folderExpr = `folder="${escapeCloudinaryValue(folder)}"`;
 

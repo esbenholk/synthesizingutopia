@@ -13,6 +13,8 @@ export async function GET(request: Request) {
     if (cursor) qs.set("cursor", cursor);
     if (folder) qs.set("folder", folder);
 
+    console.log("getrecentcontent", qs);
+
     const recentImagesResponse = await fetch(
       `${process.env.BASE_URL}/api/cloudinary/recent?${qs.toString()}`,
       { cache: "no-store" },

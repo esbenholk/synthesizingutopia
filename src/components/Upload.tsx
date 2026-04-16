@@ -36,6 +36,35 @@ function cloudinaryQuality(
  * This helper stitches them back into one string.
  * It also accepts a plain string so callers can always run any title through it.
  */
+
+async function padToSquare(
+  dataUrl: string,
+  background = "#000000",
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const size = Math.max(img.width, img.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+
+      // fill background
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, size, size);
+
+      // center the image
+      const dx = (size - img.width) / 2;
+      const dy = (size - img.height) / 2;
+      ctx.drawImage(img, dx, dy);
+
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.src = dataUrl;
+  });
+}
+
 function reassembleTitle(
   context: Record<string, string> | undefined | null,
 ): string {
@@ -552,9 +581,11 @@ export function Upload({ folder = "utopias" }: { folder?: string }) {
 
     setLoading(true);
     if (image) {
-      upLoadImage(image);
+      const squared = await padToSquare(image, "#6508ff");
+      upLoadImage(squared);
     } else if (generatedImage) {
-      upLoadImage(generatedImage);
+      const squared = await padToSquare(generatedImage, "#6508ff");
+      upLoadImage(squared);
     }
   };
 
