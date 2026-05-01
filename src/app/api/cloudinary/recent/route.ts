@@ -52,7 +52,15 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
 
   const limit = parseInt(url.searchParams.get("limit") || "10", 10);
-  const folder = url.searchParams.get("folder") || "utopias";
+  const foldersParam = url.searchParams.get("folders");
+  const folder = url.searchParams.get("folder");
+
+  // Build array of folders
+  const folders = foldersParam
+    ? foldersParam.split(",").map((f) => f.trim()).filter(Boolean)
+    : folder
+      ? [folder]
+      : ["utopias"]; // fallback
   const cursor = url.searchParams.get("cursor") || undefined;
 
   const sortParam = (url.searchParams.get("sort") || "asc").toLowerCase();
@@ -61,10 +69,15 @@ export async function GET(request: Request) {
   const searchRaw = url.searchParams.get("search");
   const tags = parseSearchToTags(searchRaw);
 
-  console.log("getrecentcontent", folder);
+ 
 
   try {
-    const folderExpr = `folder="${escapeCloudinaryValue(folder)}"`;
+    const folderExpr =
+    folders.length === 1
+      ? `folder="${escapeCloudinaryValue(folders[0])}"`
+      : `(${folders
+          .map((f) => `folder="${escapeCloudinaryValue(f)}"`)
+          .join(" OR ")})`;
 
     const tagsExpr =
       tags.length > 0
@@ -74,6 +87,9 @@ export async function GET(request: Request) {
         : "";
 
     const expression = `${folderExpr}${tagsExpr}`;
+
+
+    console.log("GET CONTENT FROM", expression);
 
     let q = cloudinary.search
       .expression(expression)
