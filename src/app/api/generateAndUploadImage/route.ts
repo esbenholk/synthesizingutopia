@@ -90,15 +90,12 @@ export async function POST(request: Request) {
 
     console.log("has prompt:" + remixedPrompt);
 
-    // 2) Generate image (use base64 -> data URI for direct upload)
+    // 2) Generate image
     const imageGen = await openai.images.generate({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt: `${remixedPrompt}`.trim(),
       size: "1024x1024",
       n: 1,
-      // quality: "standard", // optional
-      // style: "vivid",      // optional
-      response_format: "b64_json", // default when using b64 access below
     });
 
     const b64 = imageGen.data?.[0]?.b64_json;
@@ -216,7 +213,6 @@ Rules:
         },
       ],
       temperature: 0.3,
-      response_format: { type: "json_object" },
       max_tokens: 800,
     });
 
