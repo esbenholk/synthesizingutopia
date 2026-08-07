@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -7,68 +6,99 @@ const openai = new OpenAI({
 });
 
 interface GenerationResult {
-  sentence: string;
+  prompt: string;
+  remixedPrompt: string;
   imageUrl: string;
-  trends: string[];
-  geo: string;
+  tags: string;
 }
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    let prompt = url.searchParams.get("prompt") || "";
+    const prompt = url.searchParams.get("prompt") || "";
     const adjectives = url.searchParams.get("adjectives") || "";
 
-    console.log("generates image", prompt);
+    if (!prompt.trim()) {
+      return NextResponse.json(
+        { error: "Missing prompt parameter" },
+        { status: 400 },
+      );
+    }
 
-    // // Generate sentence using OpenAI
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "user",
-          content: `pretend that you are an image prompt engineer that is trying to depict a scene in a world. We need to write an image prompt that expands on and depicts the following sentence: There is... ${prompt}. The world should fit this vibe: ${adjectives} and be in the style of mediaval drawings or post-internet graphics and sci-fi,  please output an image prompt in english`,
-        },
-      ],
-      max_tokens: 100,
+    console.log("Generating image from prompt:", prompt);
+
+    // 1) Generate a better image prompt
+    const completion = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: `
+You are an image prompt engineer.
+
+Expand the following concept into a strong image-generation prompt in English.
+
+Base concept:
+"There is ${prompt}"
+
+Desired vibe:
+${adjectives}
+
+Visual style:
+- medieval drawings
+- fantasy
+- post-internet graphics
+- sci-fi
+
+Rules:
+- do NOT include captions
+- do NOT include typography
+- do NOT include UI elements
+- do NOT include interfaces
+- output only the final image prompt
+      `.trim(),
     });
 
-    const sentence = completion.choices[0].message.content || "";
-    sentence.replace('"', "");
+    const sentence = completion.output_text.trim().replace(/^["']|["']$/g, "");
 
-    console.log("has prompt", sentence);
+    console.log("Remixed prompt:", sentence);
 
-    let styleSuffix =
-      "the image should be in the style of mideaval drawings, fantasy, post-internet graphics and sci-fi. the image is not allowed to show any caption or UI element.";
+    const styleSuffix =
+      "The image should be in the style of medieval drawings, fantasy, post-internet graphics, and sci-fi. Do not show captions, text, labels, or UI elements.";
 
-    // Generate image using DALL-E
+    // 2) Generate the image
+    // If your account does not have access to "gpt-image-2",
+    // change this model name to the image model available to your account.
     const image = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: `${sentence}\n${styleSuffix}`.trim(),
-
-      n: 1,
+      model: "gpt-image-2",
+      prompt: `${sentence}\n\n${styleSuffix}`.trim(),
       size: "1024x1024",
+      quality: "medium",
+      n: 1,
     });
 
-    console.log(
-      "has image",
-      image.data ? image.data[0].url : "imageurlplaceholder",
-    );
+    const imageBase64 = image.data?.[0]?.b64_json;
 
-    const data = {
+    if (!imageBase64) {
+      throw new Error("No image data returned from OpenAI");
+    }
+
+    // Return as a data URL so it can be used directly in the frontend
+    const imageUrl = `data:image/png;base64,${imageBase64}`;
+
+    const data: GenerationResult = {
       prompt,
       remixedPrompt: sentence,
-      imageUrl: image.data ? image.data[0].url : "imageurlplaceholder",
+      imageUrl,
       tags: adjectives,
     };
 
-    // uploadToCloudinary(data);
-
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Generation error:", error);
+
     return NextResponse.json(
-      { error: "Failed to generate content" },
+      {
+        error: "Failed to generate content",
+        details: error?.message || "Unknown error",
+      },
       { status: 500 },
     );
   }

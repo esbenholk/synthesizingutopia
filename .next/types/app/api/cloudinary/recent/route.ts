@@ -1,8 +1,8 @@
-// File: D:\SynthesizingUtopias\utopiaAPI\src\app\api\generateAndUploadImage\route.ts
-import * as entry from '../../../../../src/app/api/generateAndUploadImage/route.js'
+// File: D:\SynthesizingUtopias\utopiaAPI\src\app\api\cloudinary\recent\route.ts
+import * as entry from '../../../../../../src/app/api/cloudinary/recent/route.js'
 import type { NextRequest } from 'next/server.js'
 
-type TEntry = typeof import('../../../../../src/app/api/generateAndUploadImage/route.js')
+type TEntry = typeof import('../../../../../../src/app/api/cloudinary/recent/route.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

@@ -35,4 +35,12 @@ export const folderConfig: Record<string, FolderConfig> = {
     folder: "next",
     galleryType: "diagram",
   },
+  varde3f: {
+    folder: "varde3f",
+    galleryType: "diagram",
+  },
+  varde3xy: {
+    folder: "varde3xy",
+    galleryType: "diagram",
+  },
 };
