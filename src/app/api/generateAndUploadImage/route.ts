@@ -2,21 +2,15 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import OpenAI from "openai";
 
-// ---------- utils ----------
-function dedupLower(arr: string[]) {
-  const seen: Record<string, true> = {};
-  const out: string[] = [];
-  for (const t of arr) {
-    const k = t.trim().toLowerCase();
-    if (k && !seen[k]) {
-      seen[k] = true;
-      out.push(t.trim());
-    }
-  }
-  return out;
-}
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-// ---------- clients ----------
+const CLOUDINARY_CONTEXT_MAX_CHARS = 1000;
+
+// =====================================================
+// CLIENTS
+// =====================================================
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -27,282 +21,701 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-async function urlToDataUrl(imageUrl: string) {
-  const res = await fetch(imageUrl);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch image (${res.status}) from ${imageUrl}`);
+// =====================================================
+// UTILS
+// =====================================================
+
+function dedupLower(arr: string[]) {
+  const seen: Record<string, true> = {};
+  const out: string[] = [];
+
+  for (const item of arr) {
+    const value = String(item ?? "").trim();
+    const key = value.toLowerCase();
+
+    if (key && !seen[key]) {
+      seen[key] = true;
+      out.push(value);
+    }
   }
 
-  const contentType = res.headers.get("content-type") || "image/png";
-  if (!contentType.startsWith("image/")) {
-    throw new Error(`URL did not return an image. content-type=${contentType}`);
-  }
-
-  const arrayBuffer = await res.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-  return `data:${contentType};base64,${base64}`;
+  return out;
 }
 
-// ---------- route ----------
-export async function POST(request: Request) {
-  try {
-    const {
-      prompt = "",
-      adjectives = "",
-      title = "",
-      tags = "",
-      parentIds,
-    } = await request.json();
+function chunkText(
+  text: string,
+  maxLen = CLOUDINARY_CONTEXT_MAX_CHARS,
+): string[] {
+  if (!text) return [""];
 
-    const url = new URL(request.url);
+  if (text.length <= maxLen) {
+    return [text];
+  }
 
-    let folder = url.searchParams.get("folder") || "utopias";
+  const chunks: string[] = [];
+  let remaining = text;
 
-    if (!prompt) {
-      return NextResponse.json(
-        { error: "Missing required field: prompt" },
-        { status: 400 },
-      );
-    }
+  while (remaining.length > maxLen) {
+    const window = remaining.slice(0, maxLen);
 
-    console.log("getting ready to make img:" + prompt);
-
-    // 1) Expand prompt (cheap text model is fine; keep your original wording)
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: `pretend that you are an image prompt engineer that is trying to depict a scene in a world. We need to write an image prompt that expands on and depicts the following sentence: There is... ${prompt}. The world should fit this vibe: ${adjectives} and be in the style of mediaval drawings or post-internet graphics and sci-fi,  please output an image prompt in english`,
-        },
-      ],
-      max_tokens: 200,
-      temperature: 0.8,
-    });
-
-    let remixedPrompt = completion.choices[0].message.content || "";
-    remixedPrompt = remixedPrompt
-      .replaceAll('"', "")
-      .replaceAll("** imageprompt **", "")
-      .replaceAll("*", "")
-      .replaceAll("Image Prompt:", "")
-      .trim();
-
-    console.log("has prompt:" + remixedPrompt);
-
-    // 2) Generate image
-    const imageGen = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt: `${remixedPrompt}`.trim(),
-      size: "1024x1024",
-      n: 1,
-    });
-
-    const b64 = imageGen.data?.[0]?.b64_json;
-    if (!b64) throw new Error("No b64_json returned from image generation");
-    const dataUrl = `data:image/png;base64,${b64}`;
-    const remoteUrl = imageGen.data?.[0]?.url;
-
-    if (!b64 && !remoteUrl) {
-      return NextResponse.json(
-        { error: "Image generation returned no data" },
-        { status: 502 },
-      );
-    }
-
-    // Prefer base64 → data URI (Cloudinary supports this). Fallback to remote URL.
-    const uploadSource = b64
-      ? `data:image/png;base64,${b64}`
-      : (remoteUrl as string);
-
-    console.log("check image format", b64);
-
-    // 3) Upload to Cloudinary (with your moderation settings)
-    const uploadResult = await cloudinary.uploader.upload(uploadSource, {
-      folder,
-      context: {
-        alt: "sampl",
-        caption: "sampl",
-        parentIds: parentIds != null ? String(parentIds) : "",
-      },
-      moderation:
-        "aws_rek:" +
-        "explicit_nudity:0.7:" +
-        "hate_symbols:0.6:" +
-        "suggestive:ignore:" +
-        "violence:ignore:" +
-        "visually_disturbing:ignore:" +
-        "rude_gestures:ignore:" +
-        "drugs:ignore:" +
-        "tobacco:ignore:" +
-        "alcohol:ignore:" +
-        "gambling:ignore",
-    });
-
-    console.log("uploadresult:" + uploadResult);
-
-    // 4) Moderation check
-    const moderationArr = (uploadResult as any).moderation as
-      | {
-          status: string;
-          kind: string;
-          info?: Record<string, any>;
-        }[]
-      | undefined;
-
-    const wasRejected = moderationArr?.some(
-      (m) => m.status === "rejected" && m.kind?.startsWith("aws_rek"),
+    const lastSentence = Math.max(
+      window.lastIndexOf(". "),
+      window.lastIndexOf("! "),
+      window.lastIndexOf("? "),
     );
 
-    console.log("checks for decency" + wasRejected + moderationArr);
+    const cutAt = lastSentence > maxLen * 0.5 ? lastSentence + 1 : maxLen;
 
-    if (wasRejected) {
-      return NextResponse.json(
-        { error: "image does not adhere to our policy" },
-        { status: 400 },
-      );
-    }
+    chunks.push(remaining.slice(0, cutAt).trim());
 
-    const visionImageUrl =
-      dataUrl ?? (await urlToDataUrl(uploadResult.secure_url));
-    console.log(
-      "image was not rejected:" + !wasRejected,
-      "secure url",
-      uploadResult.secure_url,
-    );
+    remaining = remaining.slice(cutAt).trim();
+  }
 
-    // 5) Vision pass to extract metadata (same prompt you used)
-    const visionPrompt = `
-You will be given an image of a "Utopia" and the intended title: "${prompt}".
+  if (remaining.length > 0) {
+    chunks.push(remaining);
+  }
 
-Return ONLY minified JSON with these keys:
-{"title":"","caption":"","altText":"","extended_story":"","political_state":"","tags":[],"vibe":[],"objects":[],"scenes":[]}
+  return chunks;
+}
 
-Rules:
-- "title": ≤ 7 words, aligned with "${prompt}" (refine if needed).
-- "caption": ≤ 2 sentences, start with "in our utopia there is".
-- "altText": ≤ 15 words, describing neutrally the image. 
-- "extended_story": ≤ 3 sentences fiction inside the image. imagine you are telling a story set in the image.
-- "political_state": a short, neutral description that fits the image (e.g., "communal eco-city", "technocratic meritocracy").
-- "tags": up to 12 short tags (nouns/adjectives; no hashtags/emojis).
-- "vibe": up to 3 mood words.
-- "objects": up to 8 concrete things visible.
-- "scenes": up to 4 scene/place words.
-- No extra text; JSON only.`;
+function contextValue(value: unknown): string {
+  if (value == null) return "";
 
-    const visionMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
-      [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: visionPrompt },
-            { type: "image_url", image_url: { url: uploadSource } },
-          ],
-        },
-      ];
+  if (Array.isArray(value)) {
+    return value.map(String).join(",").slice(0, CLOUDINARY_CONTEXT_MAX_CHARS);
+  }
 
-    const vision = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: visionPrompt },
-            { type: "image_url", image_url: { url: uploadResult.secure_url } },
-          ],
-        },
-      ],
-      temperature: 0.3,
-      max_tokens: 800,
-    });
+  return String(value).slice(0, CLOUDINARY_CONTEXT_MAX_CHARS);
+}
 
-    const raw = vision.choices[0]?.message?.content ?? "{}";
+function normaliseTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) {
+    return tags.map((tag) => String(tag).trim()).filter(Boolean);
+  }
 
-    console.log("has json analysis:" + raw);
-
-    let ai: any = {};
-    try {
-      ai = JSON.parse(raw);
-    } catch {
-      // leave ai as {}
-    }
-
-    const payload = {
-      title: String(ai?.title ?? title ?? "").trim(),
-      caption: String(ai?.caption ?? "").trim(),
-      altText: String(ai?.altText ?? "").trim(),
-      extended_story: String(ai?.extended_story ?? "").trim(),
-      political_state: String(ai?.political_state ?? "").trim(),
-      tags: Array.isArray(ai?.tags) ? ai.tags.map(String) : [],
-      vibe: Array.isArray(ai?.vibe) ? ai.vibe.map(String) : [],
-      objects: Array.isArray(ai?.objects) ? ai.objects.map(String) : [],
-      scenes: Array.isArray(ai?.scenes) ? ai.scenes.map(String) : [],
-    };
-
-    const mergedTags = dedupLower([
-      ...payload.tags,
-      ...payload.vibe,
-      ...payload.objects,
-      ...payload.scenes,
-    ]).slice(0, 25);
-
-    // Combine user-provided tags string if present
-    const userTags = String(tags || "")
+  if (typeof tags === "string") {
+    return tags
       .split(",")
-      .map((t) => t.trim())
+      .map((tag) => tag.trim())
       .filter(Boolean);
+  }
 
-    const finalTags = dedupLower([...mergedTags, ...userTags]);
+  return [];
+}
 
-    console.log("has tags:" + finalTags);
+/**
+ * Our old AWS Rekognition setup rejected explicit nudity
+ * but ignored violence, suggestive content, drugs, etc.
+ *
+ * Therefore we DON'T reject moderationResult.flagged,
+ * because that would be substantially stricter.
+ *
+ * Instead we specifically reject the sexual category.
+ */
+function shouldRejectModeration(moderationResult: unknown): boolean {
+  const result = moderationResult as {
+    categories?: Record<string, boolean>;
+  };
 
-    // 6) Enrich the uploaded asset with tags/context
-    await cloudinary.uploader.explicit(uploadResult.public_id, {
-      type: "upload",
-      tags: finalTags.join(","),
-      context: {
-        caption: title || remixedPrompt,
-        alt: payload.altText,
-        ai_title: payload.title,
-        ai_political_state: payload.political_state,
-        ai_vibe: (payload.vibe || []).join(", "),
-        ai_objects: (payload.objects || []).slice(0, 5).join(", "),
-        ai_scenes: (payload.scenes || []).join(", "),
-        ai_extended_story: payload.extended_story,
-        parentIds: parentIds != null ? String(parentIds) : "",
-      },
-    });
+  return Boolean(result?.categories?.["sexual"]);
+}
 
-    console.log("does upload");
+// =====================================================
+// ROUTE
+// =====================================================
 
-    // 7) Return everything the client likely needs (including the remixed prompt)
-    return NextResponse.json({
-      prompt,
-      adjectives,
-      remixedPrompt,
-      // image returned from OpenAI (if you still want it)
-      openaiImageUrl: remoteUrl ?? null,
-      // cloudinary data
-      url: uploadResult.secure_url,
-      publicId: uploadResult.public_id,
-      folder,
-      // ai metadata
-      title: title || remixedPrompt,
-      alt: payload.altText,
-      ai_title: payload.title,
-      ai_political_state: payload.political_state,
-      ai_vibe: (payload.vibe || []).join(", "),
-      ai_objects: (payload.objects || []).slice(0, 5).join(", "),
-      ai_scenes: (payload.scenes || []).join(", "),
-      ai_extended_story: payload.extended_story,
-      tags: finalTags,
-      parentIds: parentIds ?? null,
-    });
-  } catch (error) {
-    console.error("Generate+Upload error:", error);
+export async function POST(request: Request) {
+  // ---------------------------------------------------
+  // Read the request BEFORE starting the stream.
+  // ---------------------------------------------------
+
+  let body: any;
+
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json(
-      { error: "Failed to generate and upload image" },
-      { status: 500 },
+      {
+        error: "Invalid request body",
+      },
+      {
+        status: 400,
+      },
     );
   }
+
+  const {
+    prompt = "",
+    adjectives = "",
+    title = "",
+    tags = "",
+    parentIds,
+  } = body;
+
+  const url = new URL(request.url);
+
+  const folder = url.searchParams.get("folder") || "utopias";
+
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    return NextResponse.json(
+      {
+        error: "Missing required field: prompt",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  // ===================================================
+  // HEROKU STREAM
+  // ===================================================
+
+  const encoder = new TextEncoder();
+
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+
+  let streamClosed = false;
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      // -----------------------------------------------
+      // Helpers for writing safely to the stream.
+      // -----------------------------------------------
+
+      const send = (text: string) => {
+        if (streamClosed) return;
+
+        try {
+          controller.enqueue(encoder.encode(text));
+        } catch {
+          streamClosed = true;
+
+          if (heartbeat) {
+            clearInterval(heartbeat);
+          }
+        }
+      };
+
+      const finish = (data: unknown) => {
+        if (heartbeat) {
+          clearInterval(heartbeat);
+        }
+
+        if (streamClosed) return;
+
+        try {
+          send(JSON.stringify(data));
+
+          controller.close();
+          streamClosed = true;
+        } catch (error) {
+          console.error("Could not close stream:", error);
+        }
+      };
+
+      // -----------------------------------------------
+      // Send first byte immediately.
+      //
+      // Whitespace before JSON is valid JSON.
+      // -----------------------------------------------
+
+      send("\n");
+
+      // -----------------------------------------------
+      // Keep the Heroku connection alive.
+      // -----------------------------------------------
+
+      heartbeat = setInterval(() => {
+        send(" \n");
+      }, 15_000);
+
+      // =================================================
+      // RUN THE ACTUAL GENERATION PIPELINE
+      // =================================================
+
+      void (async () => {
+        try {
+          console.log("Getting ready to make image:", prompt);
+
+          // =============================================
+          // 1. EXPAND / REMIX PROMPT
+          // =============================================
+
+          console.log("Generating remixed prompt...");
+
+          const completion = await openai.responses.create({
+            model: "gpt-5-mini",
+
+            input: `
+You are an image prompt engineer.
+
+Expand the following concept into a strong visual image-generation prompt in English.
+
+Base concept:
+
+"There is ${prompt}"
+
+Desired vibe:
+
+${adjectives}
+
+The world should combine:
+
+- medieval drawings
+- fantasy
+- post-internet graphics
+- science fiction
+
+Describe a coherent scene rather than simply listing styles.
+
+Do not include:
+- captions
+- typography
+- interface elements
+- UI
+- labels
+
+Output ONLY the final image prompt.
+                `.trim(),
+
+            max_output_tokens: 300,
+          });
+
+          let remixedPrompt = completion.output_text
+            .trim()
+            .replaceAll('"', "")
+            .replaceAll("** imageprompt **", "")
+            .replaceAll("*", "")
+            .replaceAll("Image Prompt:", "")
+            .trim();
+
+          if (!remixedPrompt) {
+            // Fallback if the remix call somehow
+            // returned no usable text.
+            remixedPrompt = `
+There is ${prompt}.
+
+The atmosphere is ${adjectives}.
+
+A world combining medieval drawings,
+fantasy, post-internet graphics and
+science fiction.
+
+No captions, typography, UI,
+interfaces or labels.
+              `.trim();
+          }
+
+          console.log("Has prompt:", remixedPrompt);
+
+          // =============================================
+          // 2. GENERATE IMAGE
+          // =============================================
+
+          console.log("Starting GPT Image generation...");
+
+          const imageGen = await openai.images.generate({
+            model: "gpt-image-2",
+
+            prompt: remixedPrompt,
+
+            size: "1024x1024",
+
+            quality: "medium",
+
+            output_format: "png",
+
+            n: 1,
+          });
+
+          console.log("Image generation finished.");
+
+          // GPT Image returns base64.
+          const b64 = imageGen.data?.[0]?.b64_json;
+
+          if (!b64) {
+            throw new Error("No b64_json returned from image generation");
+          }
+
+          const dataUrl = `data:image/png;base64,${b64}`;
+
+          // =============================================
+          // 3. MODERATE IMAGE BEFORE CLOUDINARY
+          // =============================================
+
+          console.log("Running image moderation...");
+
+          const moderation = await openai.moderations.create({
+            model: "omni-moderation-latest",
+
+            input: [
+              {
+                type: "image_url",
+
+                image_url: {
+                  url: dataUrl,
+                },
+              },
+            ],
+          });
+
+          const moderationResult = moderation.results?.[0];
+
+          console.log("Moderation result:", moderationResult);
+
+          const wasRejected = shouldRejectModeration(moderationResult);
+
+          if (wasRejected) {
+            console.error(
+              "Image rejected by moderation.",
+              moderationResult?.categories,
+            );
+
+            // IMPORTANT:
+            //
+            // Because we've already started streaming,
+            // HTTP status is already 200.
+            //
+            // Therefore error state is communicated
+            // inside the JSON response.
+            finish({
+              ok: false,
+
+              error: "image does not adhere to our policy",
+
+              status: 400,
+            });
+
+            return;
+          }
+
+          console.log("Image passed moderation.");
+
+          // =============================================
+          // 4. UPLOAD TO CLOUDINARY
+          // =============================================
+
+          console.log("Uploading image to Cloudinary...");
+
+          const uploadResult = await cloudinary.uploader.upload(dataUrl, {
+            folder,
+
+            context: {
+              alt: contextValue(title || prompt),
+
+              caption: contextValue(title || prompt),
+
+              parentIds: contextValue(parentIds),
+            },
+
+            // IMPORTANT:
+            //
+            // NO aws_rek moderation here.
+            //
+            // Moderation has already been done
+            // with OpenAI.
+          });
+
+          console.log("Cloudinary upload complete:", uploadResult.public_id);
+
+          // =============================================
+          // 5. IMAGE / VISION METADATA PASS
+          // =============================================
+
+          const visionPrompt = `
+You will be given an image of a "Utopia" and the intended title:
+
+"${prompt}"
+
+Return ONLY valid JSON with these keys:
+
+{
+  "title":"",
+  "caption":"",
+  "altText":"",
+  "extended_story":"",
+  "political_state":"",
+  "tags":[],
+  "vibe":[],
+  "objects":[],
+  "scenes":[]
+}
+
+Rules:
+
+- "title":
+  ≤ 7 words, aligned with "${prompt}".
+  Refine if needed.
+
+- "caption":
+  ≤ 2 sentences.
+  Start with:
+  "in our utopia there is"
+
+- "altText":
+  ≤ 15 words.
+  Neutrally describe the image.
+
+- "extended_story":
+  ≤ 3 sentences of fiction taking place
+  inside the depicted world.
+
+- "political_state":
+  A short neutral description that fits
+  the image.
+  Examples:
+  "communal eco-city"
+  "technocratic meritocracy"
+
+- "tags":
+  Up to 12 short tags.
+  Nouns/adjectives only.
+  No hashtags or emojis.
+
+- "vibe":
+  Up to 3 mood words.
+
+- "objects":
+  Up to 8 concrete things visibly present.
+
+- "scenes":
+  Up to 4 scene/place words.
+
+Return valid JSON only.
+No markdown.
+No explanations.
+            `.trim();
+
+          console.log("Starting vision analysis...");
+
+          const vision = await openai.chat.completions.create({
+            model: "gpt-5-mini",
+
+            messages: [
+              {
+                role: "user",
+
+                content: [
+                  {
+                    type: "text",
+
+                    text: visionPrompt,
+                  },
+
+                  {
+                    type: "image_url",
+
+                    image_url: {
+                      url: uploadResult.secure_url,
+                    },
+                  },
+                ],
+              },
+            ],
+
+            response_format: {
+              type: "json_object",
+            },
+
+            max_completion_tokens: 800,
+          });
+
+          const raw = vision.choices[0]?.message?.content ?? "{}";
+
+          console.log("Has JSON analysis:", raw);
+
+          // =============================================
+          // 6. PARSE AI METADATA
+          // =============================================
+
+          let ai: any = {};
+
+          try {
+            ai = JSON.parse(raw);
+          } catch (error) {
+            console.error("Could not parse vision JSON:", error);
+
+            ai = {};
+          }
+
+          const payload = {
+            title: String(ai?.title ?? title ?? "").trim(),
+
+            caption: String(ai?.caption ?? "").trim(),
+
+            altText: String(ai?.altText ?? "").trim(),
+
+            extended_story: String(ai?.extended_story ?? "").trim(),
+
+            political_state: String(ai?.political_state ?? "").trim(),
+
+            tags: Array.isArray(ai?.tags) ? ai.tags.map(String) : [],
+
+            vibe: Array.isArray(ai?.vibe) ? ai.vibe.map(String) : [],
+
+            objects: Array.isArray(ai?.objects) ? ai.objects.map(String) : [],
+
+            scenes: Array.isArray(ai?.scenes) ? ai.scenes.map(String) : [],
+          };
+
+          console.log("AI metadata payload:", payload);
+
+          // =============================================
+          // 7. CREATE TAG LIST
+          // =============================================
+
+          const aiTags = dedupLower([
+            ...payload.tags,
+            ...payload.vibe,
+            ...payload.objects,
+            ...payload.scenes,
+          ]).slice(0, 25);
+
+          const userTags = normaliseTags(tags);
+
+          const finalTags = dedupLower([...aiTags, ...userTags]).slice(0, 30);
+
+          console.log("Final tags:", finalTags);
+
+          // =============================================
+          // 8. BUILD CLOUDINARY CAPTION CONTEXT
+          // =============================================
+
+          const captionSource = String(title || remixedPrompt).trim();
+
+          const captionChunks = chunkText(captionSource);
+
+          const titleContext: Record<string, string> = {
+            caption: captionChunks[0] ?? "",
+          };
+
+          for (let i = 1; i < captionChunks.length; i++) {
+            titleContext[`title_continuation_${i}`] = captionChunks[i];
+          }
+
+          // =============================================
+          // 9. ENRICH CLOUDINARY ASSET
+          // =============================================
+
+          console.log("Updating Cloudinary metadata...");
+
+          await cloudinary.uploader.explicit(uploadResult.public_id, {
+            type: "upload",
+
+            tags: finalTags.join(","),
+
+            context: {
+              ...titleContext,
+
+              alt: contextValue(payload.altText),
+
+              ai_title: contextValue(payload.title),
+
+              ai_political_state: contextValue(payload.political_state),
+
+              ai_vibe: contextValue(payload.vibe.join(", ")),
+
+              ai_objects: contextValue(payload.objects.slice(0, 5).join(", ")),
+
+              ai_scenes: contextValue(payload.scenes.join(", ")),
+
+              ai_extended_story: contextValue(payload.extended_story),
+
+              parentIds: contextValue(parentIds),
+            },
+          });
+
+          console.log("Cloudinary metadata updated.");
+
+          // =============================================
+          // 10. FINAL RESPONSE
+          // =============================================
+
+          finish({
+            ok: true,
+
+            prompt,
+
+            adjectives,
+
+            remixedPrompt,
+
+            // GPT Image models no longer return
+            // the temporary OpenAI URL used by
+            // the old DALL-E flow.
+            openaiImageUrl: null,
+
+            // Cloudinary
+            url: uploadResult.secure_url,
+
+            publicId: uploadResult.public_id,
+
+            folder,
+
+            // AI metadata
+            title: title || remixedPrompt,
+
+            alt: payload.altText,
+
+            ai_title: payload.title,
+
+            ai_political_state: payload.political_state,
+
+            ai_vibe: payload.vibe.join(", "),
+
+            ai_objects: payload.objects.slice(0, 5).join(", "),
+
+            ai_scenes: payload.scenes.join(", "),
+
+            ai_extended_story: payload.extended_story,
+
+            tags: finalTags,
+
+            parentIds: parentIds ?? null,
+
+            moderation: {
+              passed: true,
+            },
+          });
+        } catch (error: any) {
+          console.error("Generate+Upload error:", error);
+
+          // Because streaming already started,
+          // the HTTP response status is already 200.
+          finish({
+            ok: false,
+
+            error: "Failed to generate and upload image",
+
+            details: error?.message ?? "Unknown error",
+
+            status: 500,
+          });
+        }
+      })();
+    },
+
+    cancel() {
+      streamClosed = true;
+
+      if (heartbeat) {
+        clearInterval(heartbeat);
+      }
+
+      console.log("Generate+Upload client disconnected.");
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+
+      "Cache-Control": "no-cache, no-transform",
+
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
