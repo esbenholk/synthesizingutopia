@@ -42,42 +42,6 @@ function dedupLower(arr: string[]) {
   return out;
 }
 
-function chunkText(
-  text: string,
-  maxLen = CLOUDINARY_CONTEXT_MAX_CHARS,
-): string[] {
-  if (!text) return [""];
-
-  if (text.length <= maxLen) {
-    return [text];
-  }
-
-  const chunks: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > maxLen) {
-    const window = remaining.slice(0, maxLen);
-
-    const lastSentence = Math.max(
-      window.lastIndexOf(". "),
-      window.lastIndexOf("! "),
-      window.lastIndexOf("? "),
-    );
-
-    const cutAt = lastSentence > maxLen * 0.5 ? lastSentence + 1 : maxLen;
-
-    chunks.push(remaining.slice(0, cutAt).trim());
-
-    remaining = remaining.slice(cutAt).trim();
-  }
-
-  if (remaining.length > 0) {
-    chunks.push(remaining);
-  }
-
-  return chunks;
-}
-
 function contextValue(value: unknown): string {
   if (value == null) return "";
 
@@ -492,6 +456,8 @@ No explanations.
           const vision = await openai.chat.completions.create({
             model: "gpt-5-mini",
 
+            reasoning_effort: "low",
+
             messages: [
               {
                 role: "user",
@@ -515,28 +481,94 @@ No explanations.
             ],
 
             response_format: {
-              type: "json_object",
+              type: "json_schema",
+
+              json_schema: {
+                name: "utopia_image_metadata",
+
+                strict: true,
+
+                schema: {
+                  type: "object",
+
+                  additionalProperties: false,
+
+                  properties: {
+                    title: { type: "string" },
+                    caption: { type: "string" },
+                    altText: { type: "string" },
+                    extended_story: { type: "string" },
+                    political_state: { type: "string" },
+
+                    tags: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+
+                    vibe: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+
+                    objects: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+
+                    scenes: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                  },
+
+                  required: [
+                    "title",
+                    "caption",
+                    "altText",
+                    "extended_story",
+                    "political_state",
+                    "tags",
+                    "vibe",
+                    "objects",
+                    "scenes",
+                  ],
+                },
+              },
             },
 
-            max_completion_tokens: 800,
+            max_completion_tokens: 2000,
           });
 
-          const raw = vision.choices[0]?.message?.content ?? "{}";
+          console.log(
+            "VISION FINISH REASON:",
+            vision.choices[0]?.finish_reason,
+          );
 
-          console.log("Has JSON analysis:", raw);
+          console.log("VISION USAGE:", vision.usage);
+
+          const raw = vision.choices[0]?.message?.content ?? "";
+
+          console.log("OPENAI RAW IMAGE ANALYSIS:", raw);
 
           // =============================================
           // 6. PARSE AI METADATA
           // =============================================
 
-          let ai: any = {};
+          if (!raw.trim()) {
+            throw new Error(
+              "OpenAI vision analysis returned an empty response",
+            );
+          }
+
+          let ai: any;
 
           try {
             ai = JSON.parse(raw);
           } catch (error) {
             console.error("Could not parse vision JSON:", error);
+            console.error("RAW RESPONSE WAS:", raw);
 
-            ai = {};
+            throw new Error("OpenAI vision metadata was not valid JSON");
           }
 
           const payload = {
@@ -579,20 +611,33 @@ No explanations.
           console.log("Final tags:", finalTags);
 
           // =============================================
-          // 8. BUILD CLOUDINARY CAPTION CONTEXT
+          // 8. BUILD CLOUDINARY CONTEXT
           // =============================================
 
-          const captionSource = String(title || remixedPrompt).trim();
+          const metadataContext: Record<string, string> = {
+            // Cloudinary's human-readable fields
+            caption: contextValue(payload.caption),
+            alt: contextValue(payload.altText),
 
-          const captionChunks = chunkText(captionSource);
+            // Canonical reader-friendly metadata
+            title: contextValue(payload.title),
+            altText: contextValue(payload.altText),
+            political_state: contextValue(payload.political_state),
+            vibe: contextValue(payload.vibe.join(", ")),
+            objects: contextValue(payload.objects.join(", ")),
+            scenes: contextValue(payload.scenes.join(", ")),
+            extended_story: contextValue(payload.extended_story),
 
-          const titleContext: Record<string, string> = {
-            caption: captionChunks[0] ?? "",
+            // Existing aliases kept for compatibility
+            ai_title: contextValue(payload.title),
+            ai_political_state: contextValue(payload.political_state),
+            ai_vibe: contextValue(payload.vibe.join(", ")),
+            ai_objects: contextValue(payload.objects.join(", ")),
+            ai_scenes: contextValue(payload.scenes.join(", ")),
+            ai_extended_story: contextValue(payload.extended_story),
+
+            parentIds: contextValue(parentIds),
           };
-
-          for (let i = 1; i < captionChunks.length; i++) {
-            titleContext[`title_continuation_${i}`] = captionChunks[i];
-          }
 
           // =============================================
           // 9. ENRICH CLOUDINARY ASSET
@@ -605,25 +650,7 @@ No explanations.
 
             tags: finalTags.join(","),
 
-            context: {
-              ...titleContext,
-
-              alt: contextValue(payload.altText),
-
-              ai_title: contextValue(payload.title),
-
-              ai_political_state: contextValue(payload.political_state),
-
-              ai_vibe: contextValue(payload.vibe.join(", ")),
-
-              ai_objects: contextValue(payload.objects.slice(0, 5).join(", ")),
-
-              ai_scenes: contextValue(payload.scenes.join(", ")),
-
-              ai_extended_story: contextValue(payload.extended_story),
-
-              parentIds: contextValue(parentIds),
-            },
+            context: metadataContext,
           });
 
           console.log("Cloudinary metadata updated.");
@@ -653,18 +680,33 @@ No explanations.
 
             folder,
 
-            // AI metadata
-            title: title || remixedPrompt,
+            // Reader-friendly metadata
+            title: payload.title || title || prompt,
+
+            caption: payload.caption,
 
             alt: payload.altText,
 
+            altText: payload.altText,
+
+            political_state: payload.political_state,
+
+            vibe: payload.vibe.join(", "),
+
+            objects: payload.objects.join(", "),
+
+            scenes: payload.scenes.join(", "),
+
+            extended_story: payload.extended_story,
+
+            // Existing aliases kept for Unity compatibility
             ai_title: payload.title,
 
             ai_political_state: payload.political_state,
 
             ai_vibe: payload.vibe.join(", "),
 
-            ai_objects: payload.objects.slice(0, 5).join(", "),
+            ai_objects: payload.objects.join(", "),
 
             ai_scenes: payload.scenes.join(", "),
 

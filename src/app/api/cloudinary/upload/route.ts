@@ -136,10 +136,18 @@ function toContextString(value: unknown): string {
   if (value == null) return "";
 
   if (Array.isArray(value)) {
-    return value.join(",");
+    return value.map(String).join(",").slice(0, CLOUDINARY_CONTEXT_MAX_CHARS);
   }
 
-  return String(value);
+  return String(value).slice(0, CLOUDINARY_CONTEXT_MAX_CHARS);
+}
+
+function findTagByPrefix(tags: string[], prefix: string): string {
+  const match = tags.find((tag) =>
+    tag.trim().toLowerCase().startsWith(prefix.toLowerCase()),
+  );
+
+  return match ? match.trim().toLowerCase() : "";
 }
 
 /**
@@ -203,6 +211,20 @@ export async function POST(request: Request) {
     }
 
     const rawTitle = typeof title === "string" ? title.trim() : "";
+
+    const incomingTags = normaliseTags(tags);
+
+    const resolvedZoneHint = String(
+      zoneHint ?? findTagByPrefix(incomingTags, "zoneofinterest"),
+    )
+      .trim()
+      .toLowerCase();
+
+    const resolvedIntimacyHint = String(
+      intimacyHint ?? findTagByPrefix(incomingTags, "intimacylevel"),
+    )
+      .trim()
+      .toLowerCase();
 
     // -------------------------------------------------
     // PREPARE TITLE FOR CLOUDINARY
@@ -357,8 +379,8 @@ Rules:
 
 - "zoneofinterest":
   ${
-    zoneHint
-      ? `The user chose "${zoneHint}". Use exactly "${zoneHint}".`
+    resolvedZoneHint
+      ? `The user chose "${resolvedZoneHint}". Use exactly "${resolvedZoneHint}".`
       : `
 Pick exactly ONE of:
 
@@ -376,8 +398,8 @@ Choose whichever best fits the image.
 
 - "intimacylevel":
   ${
-    intimacyHint
-      ? `The user chose "${intimacyHint}". Use exactly "${intimacyHint}".`
+    resolvedIntimacyHint
+      ? `The user chose "${resolvedIntimacyHint}". Use exactly "${resolvedIntimacyHint}".`
       : `
 Pick exactly ONE of:
 
@@ -400,6 +422,8 @@ Return valid JSON only.
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
 
+      reasoning_effort: "low",
+
       messages: [
         {
           role: "user",
@@ -414,7 +438,7 @@ Return valid JSON only.
               type: "image_url",
 
               image_url: {
-                url: imageUrl,
+                url: result.secure_url,
               },
             },
           ],
@@ -422,19 +446,84 @@ Return valid JSON only.
       ],
 
       response_format: {
-        type: "json_object",
+        type: "json_schema",
+
+        json_schema: {
+          name: "utopia_image_metadata",
+
+          strict: true,
+
+          schema: {
+            type: "object",
+
+            additionalProperties: false,
+
+            properties: {
+              title: { type: "string" },
+              caption: { type: "string" },
+              altText: { type: "string" },
+              extended_story: { type: "string" },
+              political_state: { type: "string" },
+
+              tags: {
+                type: "array",
+                items: { type: "string" },
+              },
+
+              vibe: {
+                type: "array",
+                items: { type: "string" },
+              },
+
+              objects: {
+                type: "array",
+                items: { type: "string" },
+              },
+
+              scenes: {
+                type: "array",
+                items: { type: "string" },
+              },
+
+              zoneofinterest: { type: "string" },
+              intimacylevel: { type: "string" },
+            },
+
+            required: [
+              "title",
+              "caption",
+              "altText",
+              "extended_story",
+              "political_state",
+              "tags",
+              "vibe",
+              "objects",
+              "scenes",
+              "zoneofinterest",
+              "intimacylevel",
+            ],
+          },
+        },
       },
 
-      max_completion_tokens: 600,
+      max_completion_tokens: 2000,
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    console.log("VISION FINISH REASON:", completion.choices[0]?.finish_reason);
 
-    console.log("OPENAI RAW IMAGE ANALYSIS", raw);
+    console.log("VISION USAGE:", completion.usage);
+
+    const raw = completion.choices[0]?.message?.content ?? "";
+
+    console.log("OPENAI RAW IMAGE ANALYSIS:", raw);
 
     // =================================================
     // 5. PARSE GPT RESPONSE
     // =================================================
+
+    if (!raw.trim()) {
+      throw new Error("OpenAI vision analysis returned an empty response");
+    }
 
     let ai: any;
 
@@ -442,8 +531,9 @@ Return valid JSON only.
       ai = JSON.parse(raw);
     } catch (error) {
       console.error("Could not parse OpenAI JSON:", error);
+      console.error("RAW RESPONSE WAS:", raw);
 
-      ai = {};
+      throw new Error("OpenAI vision metadata was not valid JSON");
     }
 
     const payload = {
@@ -466,12 +556,12 @@ Return valid JSON only.
       scenes: Array.isArray(ai?.scenes) ? ai.scenes.map(String) : [],
 
       // User hint always wins
-      zoneofinterest: String(zoneHint ?? ai?.zoneofinterest ?? "")
+      zoneofinterest: String(resolvedZoneHint || ai?.zoneofinterest || "")
         .trim()
         .toLowerCase(),
 
       // User hint always wins
-      intimacylevel: String(intimacyHint ?? ai?.intimacylevel ?? "")
+      intimacylevel: String(resolvedIntimacyHint || ai?.intimacylevel || "")
         .trim()
         .toLowerCase(),
     };
@@ -481,8 +571,6 @@ Return valid JSON only.
     // =================================================
     // 6. BUILD TAG LIST
     // =================================================
-
-    const incomingTags = normaliseTags(tags);
 
     const mergedTags = dedupLower([
       ...payload.tags,
@@ -503,13 +591,40 @@ Return valid JSON only.
     // 7. BUILD CLOUDINARY CONTEXT
     // =================================================
 
-    const titleContext: Record<string, string> = {
-      caption: titleFirst,
+    const metadataContext: Record<string, string> = {
+      // Cloudinary's human-readable fields
+      caption: toContextString(payload.caption),
+      alt: toContextString(payload.altText),
+
+      // Canonical reader-friendly metadata
+      title: toContextString(payload.title),
+      altText: toContextString(payload.altText),
+      political_state: toContextString(payload.political_state),
+      vibe: toContextString(payload.vibe.join(", ")),
+      objects: toContextString(payload.objects.join(", ")),
+      scenes: toContextString(payload.scenes.join(", ")),
+      extended_story: toContextString(payload.extended_story),
+
+      // Existing aliases kept for compatibility
+      ai_title: toContextString(payload.title),
+      ai_political_state: toContextString(payload.political_state),
+      ai_vibe: toContextString(payload.vibe.join(", ")),
+      ai_objects: toContextString(payload.objects.join(", ")),
+      ai_scenes: toContextString(payload.scenes.join(", ")),
+      ai_extended_story: toContextString(payload.extended_story),
+
+      parentIds: toContextString(parentIds),
+
+      zone_of_interest: toContextString(payload.zoneofinterest),
+
+      intimacy_level: toContextString(payload.intimacylevel),
     };
 
-    // Store overflow title chunks
-    for (let i = 1; i < titleChunks.length; i++) {
-      titleContext[`title_continuation_${i}`] = titleChunks[i];
+    // Preserve the original long user title/prompt separately,
+    // rather than using it as the reader-facing caption.
+    for (let i = 0; i < titleChunks.length; i++) {
+      const key = i === 0 ? "source_title" : `source_title_continuation_${i}`;
+      metadataContext[key] = toContextString(titleChunks[i]);
     }
 
     // =================================================
@@ -521,29 +636,7 @@ Return valid JSON only.
 
       tags: mergedTags,
 
-      context: {
-        ...titleContext,
-
-        alt: payload.altText,
-
-        ai_title: payload.title,
-
-        ai_political_state: payload.political_state,
-
-        ai_vibe: payload.vibe.join(", "),
-
-        ai_objects: payload.objects.slice(0, 5).join(", "),
-
-        ai_scenes: payload.scenes.join(", "),
-
-        ai_extended_story: payload.extended_story,
-
-        parentIds: toContextString(parentIds),
-
-        zone_of_interest: payload.zoneofinterest,
-
-        intimacy_level: payload.intimacylevel,
-      },
+      context: metadataContext,
     });
 
     console.log("Cloudinary metadata updated.");
@@ -557,17 +650,33 @@ Return valid JSON only.
 
       publicId: result.public_id,
 
-      title: rawTitle,
+      // Reader-friendly metadata
+      title: payload.title || rawTitle,
+
+      caption: payload.caption,
 
       alt: payload.altText,
 
+      altText: payload.altText,
+
+      political_state: payload.political_state,
+
+      vibe: payload.vibe.join(", "),
+
+      objects: payload.objects.join(", "),
+
+      scenes: payload.scenes.join(", "),
+
+      extended_story: payload.extended_story,
+
+      // Existing aliases kept for compatibility
       ai_title: payload.title,
 
       ai_political_state: payload.political_state,
 
       ai_vibe: payload.vibe.join(", "),
 
-      ai_objects: payload.objects.slice(0, 5).join(", "),
+      ai_objects: payload.objects.join(", "),
 
       ai_scenes: payload.scenes.join(", "),
 

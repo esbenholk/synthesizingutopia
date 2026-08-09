@@ -77,10 +77,10 @@ Desired vibe:
 ${adjectives}
 
 Visual style:
-- medieval drawings
-- fantasy
 - post-internet graphics
 - sci-fi
+- medieval drawings
+- fantasy
 - crayola
 
 Rules:
@@ -103,7 +103,7 @@ Rules:
           // ============================================
 
           const styleSuffix = `
-The image should be in the style of medieval drawings,
+The image should be in the style of sci-fi utopian visions, medieval drawings,
 fantasy, post-internet graphics and sci-fi.
 
 The image must not contain captions, typography,

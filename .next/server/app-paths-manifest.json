@@ -1,6 +1,4 @@
 {
-  "/api/classifyImage/route": "app/api/classifyImage/route.js",
-  "/varde3f/page": "app/varde3f/page.js",
-  "/page": "app/page.js",
+  "/api/generateAndUploadImage/route": "app/api/generateAndUploadImage/route.js",
   "/api/cloudinary/upload/route": "app/api/cloudinary/upload/route.js"
 }
