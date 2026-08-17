@@ -91,6 +91,40 @@ function reassembleLegacyTitle(cx: Record<string, any>): string {
 }
 
 // =====================================================
+// NEW SOURCE TITLE (raw user-typed text, chunked)
+// =====================================================
+
+/**
+ * New assets store the raw text the user typed into the
+ * uploader textarea (before AI title/caption generation) as:
+ *
+ * source_title
+ * source_title_continuation_1
+ * source_title_continuation_2
+ *
+ * This reassembles that back into a single string.
+ */
+function reassembleSourceTitle(cx: Record<string, any>): string {
+  const first = String(cx.source_title ?? "").trim();
+
+  if (!first) return "";
+
+  const continuations: string[] = [];
+
+  let i = 1;
+
+  while (cx[`source_title_continuation_${i}`]) {
+    continuations.push(String(cx[`source_title_continuation_${i}`]).trim());
+
+    i++;
+  }
+
+  return continuations.length > 0
+    ? [first, ...continuations].filter(Boolean).join(" ").trim()
+    : first;
+}
+
+// =====================================================
 // GET
 // =====================================================
 
@@ -198,6 +232,8 @@ export async function GET(request: Request) {
       );
 
       const legacyTitle = reassembleLegacyTitle(cx);
+
+      const sourceTitle = reassembleSourceTitle(cx);
 
       const title = firstNonEmpty(
         // NEW canonical key
@@ -390,6 +426,16 @@ export async function GET(request: Request) {
         alt,
 
         // -------------------------------------------
+        // RAW USER INPUT
+        // -------------------------------------------
+        //
+        // The exact text the user typed into the uploader
+        // textarea before AI title/caption generation.
+        // -------------------------------------------
+
+        sourceTitle,
+
+        // -------------------------------------------
         // EXISTING UNITY ApiImage FIELD NAMES
         // -------------------------------------------
 
@@ -426,6 +472,8 @@ export async function GET(request: Request) {
           alt,
 
           altText: alt,
+
+          source_title: sourceTitle,
 
           political_state: aiPolitics,
 

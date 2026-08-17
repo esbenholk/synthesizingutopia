@@ -225,8 +225,8 @@ Desired vibe:
 ${adjectives}
 
 The world should combine:
-
-
+- utopian vision
+- medieval illustration
 - post-internet graphics
 - science fiction
 

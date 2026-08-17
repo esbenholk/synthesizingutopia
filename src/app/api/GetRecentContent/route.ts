@@ -14,29 +14,6 @@ function escapeCloudinaryValue(v: string) {
   return v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-// =====================================================
-// SEARCH TAGS
-// =====================================================
-//
-// Each comma-separated search term should match an asset
-// tagged with EXACTLY that tag (e.g. "broccoli figure" as
-// one literal tag), not the individual words inside it.
-//
-// We therefore use Cloudinary's exact-match operator (=)
-// rather than the tokenized operator (:). The tokenized
-// operator matches any tag CONTAINING a given word, so
-// tags:"broccoli" would also match a tag like
-// "broccoli figure" or "chocolate broccoli" - which is why
-// a naive tokenized search returned results for "broccoli"
-// or "figure" individually instead of only assets tagged
-// with the full literal phrase.
-//
-// Exact match (=) is case-sensitive, so this assumes tags
-// are stored consistently (e.g. all lowercase). If you get
-// zero/partial results, double check the exact casing of
-// the tag in the Cloudinary Media Library.
-// =====================================================
-
 function parseSearchToTags(raw: string | null): string[] {
   if (!raw) return [];
 
@@ -93,6 +70,40 @@ function reassembleLegacyTitle(cx: Record<string, any>): string {
   if (!first) return "";
 
   return [first, ...continuations].filter(Boolean).join(" ").trim();
+}
+
+// =====================================================
+// NEW SOURCE TITLE (raw user-typed text, chunked)
+// =====================================================
+
+/**
+ * New assets store the raw text the user typed into the
+ * uploader textarea (before AI title/caption generation) as:
+ *
+ * source_title
+ * source_title_continuation_1
+ * source_title_continuation_2
+ *
+ * This reassembles that back into a single string.
+ */
+function reassembleSourceTitle(cx: Record<string, any>): string {
+  const first = String(cx.source_title ?? "").trim();
+
+  if (!first) return "";
+
+  const continuations: string[] = [];
+
+  let i = 1;
+
+  while (cx[`source_title_continuation_${i}`]) {
+    continuations.push(String(cx[`source_title_continuation_${i}`]).trim());
+
+    i++;
+  }
+
+  return continuations.length > 0
+    ? [first, ...continuations].filter(Boolean).join(" ").trim()
+    : first;
 }
 
 // =====================================================
@@ -167,22 +178,6 @@ export async function GET(request: Request) {
         ? folderClauses[0]
         : `(${folderClauses.join(" OR ")})`;
 
-    // =================================================
-    // BUILD TAG EXPRESSION
-    // =================================================
-    //
-    // Use the exact-match operator (=) so a search for
-    // "broccoli figure" only matches assets carrying that
-    // literal tag - not assets tagged just "broccoli" or
-    // just "figure" (which the tokenized `:` operator would
-    // incorrectly also match, since it matches on individual
-    // words inside a tag rather than the whole tag value).
-    //
-    // Multiple comma-separated search terms are still OR'd
-    // together, e.g. "broccoli figure,banana" matches assets
-    // tagged exactly "broccoli figure" OR exactly "banana".
-    // =================================================
-
     const tagClauses = tags.map(
       (tag) => `tags="${escapeCloudinaryValue(tag)}"`,
     );
@@ -254,6 +249,8 @@ export async function GET(request: Request) {
       );
 
       const legacyTitle = reassembleLegacyTitle(cx);
+
+      const sourceTitle = reassembleSourceTitle(cx);
 
       const title = firstNonEmpty(
         pick(cx, "title", "title"),
@@ -423,6 +420,16 @@ export async function GET(request: Request) {
         alt,
 
         // -------------------------------------------
+        // RAW USER INPUT
+        // -------------------------------------------
+        //
+        // The exact text the user typed into the uploader
+        // textarea before AI title/caption generation.
+        // -------------------------------------------
+
+        sourceTitle,
+
+        // -------------------------------------------
         // UNITY AI VALUES
         // -------------------------------------------
 
@@ -452,6 +459,8 @@ export async function GET(request: Request) {
           alt,
 
           altText: alt,
+
+          source_title: sourceTitle,
 
           political_state: aiPolitics,
 

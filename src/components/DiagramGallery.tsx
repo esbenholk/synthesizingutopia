@@ -571,6 +571,10 @@ export default function DiagramGallery({
               {selected.aiTitle && (
                 <p className="title">"{selected.aiTitle}"</p>
               )}
+              {/* the raw text the user originally typed into the uploader */}
+              {selected.sourceTitle && (
+                <p className="sourceTitle">"{selected.sourceTitle}"</p>
+              )}
               {selected.aiPolitics && (
                 <p className="politics">{selected.aiPolitics}</p>
               )}

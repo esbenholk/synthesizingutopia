@@ -77,8 +77,10 @@ Desired vibe:
 ${adjectives}
 
 Visual style:
+- utopian vision
+- medieval illustration
 - post-internet graphics
-- sci-fi
+- science fiction
 
 
 Rules:
