@@ -115,7 +115,7 @@ export async function GET(request: Request) {
         .filter(Boolean)
     : folder
       ? [folder]
-      : ["utopias"];
+      : ["utopia", "utopias"];
 
   const cursor = url.searchParams.get("cursor") || undefined;
 

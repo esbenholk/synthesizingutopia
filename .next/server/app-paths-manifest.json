@@ -1,4 +1,4 @@
 {
-  "/api/generateAndUploadImage/route": "app/api/generateAndUploadImage/route.js",
-  "/api/cloudinary/upload/route": "app/api/cloudinary/upload/route.js"
+  "/gefion/page": "app/gefion/page.js",
+  "/varde3f/page": "app/varde3f/page.js"
 }

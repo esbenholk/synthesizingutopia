@@ -226,8 +226,7 @@ ${adjectives}
 
 The world should combine:
 
-- medieval drawings
-- fantasy
+
 - post-internet graphics
 - science fiction
 
@@ -277,7 +276,7 @@ interfaces or labels.
           // 2. GENERATE IMAGE
           // =============================================
 
-          console.log("Starting GPT Image generation...");
+          console.log("Starting Local LLM:[stable diffusion] generation...");
 
           const imageGen = await openai.images.generate({
             model: "gpt-image-2",

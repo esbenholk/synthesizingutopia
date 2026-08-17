@@ -79,9 +79,7 @@ ${adjectives}
 Visual style:
 - post-internet graphics
 - sci-fi
-- medieval drawings
-- fantasy
-- crayola
+
 
 Rules:
 - do NOT include captions

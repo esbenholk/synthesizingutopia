@@ -1,4 +1,4 @@
-// File: D:\SynthesizingUtopias\utopiaAPI\src\app\api\generateAndUploadImage\route.ts
+// File: E:\utopiaAPI\src\app\api\generateAndUploadImage\route.ts
 import * as entry from '../../../../../src/app/api/generateAndUploadImage/route.js'
 import type { NextRequest } from 'next/server.js'
 

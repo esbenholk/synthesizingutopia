@@ -1,3 +1,21 @@
 {
-  "pages": {}
+  "pages": {
+    "/varde3f/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/varde3f/page.css",
+      "static/chunks/app/varde3f/page.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/layout.js"
+    ],
+    "/gefion/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/gefion/page.css",
+      "static/chunks/app/gefion/page.js"
+    ]
+  }
 }
